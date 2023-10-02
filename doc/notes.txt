@@ -1,0 +1,33 @@
+Currently the plan is to add mod support for game makers to allow users of the engine to dll
+inject mods into the game without revealing backend for the code in the first place. All assets
+should be in the assets directory, purely for reference and static use. The appdata folder will
+serve as the folder where saves and so on will go. The "mods" folder will serve as the place where
+dynamic library modding will be supported. Extending object functionality without exposing the main
+game source code.
+
+https://forthebadge.com/
+
+TODO:
+
+Add engine method get_primary_device();
+
+Move Resource Objects to be created by context.h
+buffer.h
+shader.h
+texture.h
+
+Install for Linux Build:
+    sudo apt-get install libomp-dev
+
+
+Queue Types:
+
+    Transfer
+    Compute
+    Graphics
+    Present
+or
+    Transfer
+    Graphics & Compute
+    Present
+?

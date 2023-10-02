@@ -1,0 +1,57 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "C:/Program Files/VulkanSDK/1.3.250.0/Include",
+                "${workspaceFolder}/inc/",
+                "${workspaceFolder}/dep/glfw-build/src/",
+                "${workspaceFolder}/dep/assimp-build/include/",
+                "${workspaceFolder}/dep/freetype-build/include/",
+                "${workspaceFolder}/dep/glfw-src/include/",
+                "${workspaceFolder}/dep/stb-src/",
+                "${workspaceFolder}/dep/assimp-src/include/",
+                "${workspaceFolder}/dep/freetype-src/include/"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "windowsSdkVersion": "10.0.22000.0",
+            "compilerPath": "cl.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-msvc-x64"
+        },
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/inc/",
+                "${workspaceFolder}/dep/glfw-build/src/",
+                "${workspaceFolder}/dep/sdl-build/include/",
+                //"${workspaceFolder}/dep/stb-build/include/",
+                "${workspaceFolder}/dep/assimp-build/include/",
+                "${workspaceFolder}/dep/freetype-build/include/",
+                //"${workspaceFolder}/dep/sail-build/include/",
+                "${workspaceFolder}/dep/glfw-src/include/",
+                "${workspaceFolder}/dep/sdl-src/include/",
+                "${workspaceFolder}/dep/stb-src/",
+                "${workspaceFolder}/dep/assimp-src/include/",
+                "${workspaceFolder}/dep/freetype-src/include/"
+                //"${workspaceFolder}/dep/sail-src/include/"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "linux-gcc-x64",
+            "compilerArgs": [
+                "-std=c++17",
+                "-pthread",
+                "-g"
+            ]
+        }
+    ],
+    "version": 4
+}
