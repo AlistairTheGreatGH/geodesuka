@@ -87,5 +87,6 @@
         "xtr1common": "cpp",
         "xtree": "cpp"
     },
-    "dotnet.defaultSolution": "geodesuka.sln"
+    "dotnet.defaultSolution": "geodesuka.sln",
+    "cmake.configureOnOpen": false
 }
