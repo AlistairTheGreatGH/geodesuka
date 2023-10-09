@@ -39,9 +39,6 @@ namespace geodesuka::core::gcl {
 
 		// Requirement is that command lists can only be created by command_pools.
 		command_list();
-		command_list(VkCommandBuffer aCommandBuffer);
-		command_list(uint32_t aCommandBufferCount);
-		command_list(uint32_t aCommandBufferCount, VkCommandBuffer* aCommandBufferList);
 		~command_list();
 
 		// Removes VK_NULL_HANDLE elements.
@@ -67,6 +64,10 @@ namespace geodesuka::core::gcl {
 		std::vector<VkSemaphore>				WaitSemaphore;
 		std::vector<VkPipelineStageFlags>		WaitStage;
 		std::vector<VkSemaphore>				SignalSemaphore;
+
+		command_list(VkCommandBuffer aCommandBuffer);
+		command_list(uint32_t aCommandBufferCount);
+		command_list(uint32_t aCommandBufferCount, VkCommandBuffer* aCommandBufferList);
 
 	};
 

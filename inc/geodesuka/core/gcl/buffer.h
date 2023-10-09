@@ -18,6 +18,7 @@
 
 #include "variable.h"
 
+#include "command_list.h"
 #include "device.h"
 #include "context.h"
 
@@ -63,39 +64,22 @@ namespace geodesuka::core::gcl {
 
 		buffer& operator=(buffer& aRhs);
 		buffer& operator=(buffer&& aRhs) noexcept;
-		
-		// TRANSFER
-		VkCommandBuffer operator<<(buffer& aRhs);
-		// TRANSFER
-		VkCommandBuffer operator>>(buffer& aRhs);
-		// TRANSFER
-		VkCommandBuffer operator<<(image& aRhs);
-		// TRANSFER
-		VkCommandBuffer operator>>(image& aRhs);
 
-		util::list<VkCommandBuffer> copy_to(buffer& aRhs, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
-		util::list<VkCommandBuffer> copy_to(buffer& aRhs, std::vector<VkBufferCopy> aRegionList);
-		util::list<VkCommandBuffer> copy_to(image& aRhs, VkImageLayout dstImageLayout, std::vector<VkBufferImageCopy> aRegionList);
+		command_list copy(buffer& aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
+		command_list copy(buffer& aSourceData, std::vector<VkBufferCopy> aRegionList);
+		command_list copy(image& aSourceData, VkImageLayout aImageLayout, VkBufferImageCopy aRegion);
+		command_list copy(image& aSourceData, VkImageLayout aImageLayout, std::vector<VkBufferImageCopy> aRegionList);
 
-		// Use Command Buffers to update. vkCmdUpdateBuffer() 64kB limit.
-		// Has to be host memory to be used.
-		VkResult write(size_t aBufferSize, void* aBufferData);
-		VkResult write(size_t aSrcOffset, size_t aDstOffset, size_t aRegionSize, size_t aBufferSize, void* aBufferData);
-		VkResult write(uint32_t aRegionCount, VkBufferCopy *aRegionList, size_t aBufferSize, void *aBufferData);
+		VkResult write(void* aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
+		VkResult write(void* aSourceData, std::vector<VkBufferCopy> aRegionList);
 
-		VkResult read(size_t aBufferSize, void* aBufferData);
-		VkResult read(size_t aSrcOffset, size_t aDstOffset, size_t aRegionSize, size_t aBufferSize, void* aBufferData);
-		VkResult read(uint32_t aRegionCount, VkBufferCopy* aRegionList, size_t aBufferSize, void* aBufferData);
-
-		// Total memory size of the image. (Does not include mip levels)
-		size_t get_memory_size() const;
+		VkResult read(void* aDestinationData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
+		VkResult read(void* aDestinationData, std::vector<VkBufferCopy> aRegionList);
 
 		VkBuffer& handle();
 
 	private:
 
-		int							VertexCount;
-		variable					VertexLayout;
 		context*					Context;
 		VkBufferCreateInfo			CreateInfo{};
 		VkBuffer					Handle;

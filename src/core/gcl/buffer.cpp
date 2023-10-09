@@ -89,17 +89,12 @@ namespace geodesuka::core::gcl {
 			create_info RecreateInfo;
 			RecreateInfo.MemoryType		= aInput.Context->parent()->get_memory_type(aInput.AllocateInfo.memoryTypeIndex);
 			RecreateInfo.BufferUsage	= aInput.CreateInfo.usage;
-			this->VertexCount			= aInput.VertexCount;
-			this->VertexLayout			= aInput.VertexLayout;
 			Result = this->create_device_memory(aInput.Context, RecreateInfo, aInput.CreateInfo.size);
 		}
 
 		if (Result == VK_SUCCESS) {
-			VkFence Fence = VK_NULL_HANDLE;
-			VkCommandBuffer CommandBuffer = VK_NULL_HANDLE;
-
-			Fence = this->Context->create_fence();
-			CommandBuffer = (*this << aInput);
+			VkFence Fence = this->Context->create_fence();
+			command_list CommandBuffer = (*this << aInput);
 
 			Result = this->Context->execute(device::operation::TRANSFER, CommandBuffer, Fence);
 			Result = vkWaitForFences(this->Context->handle(), 1, &Fence, VK_TRUE, UINT64_MAX);
@@ -379,9 +374,95 @@ namespace geodesuka::core::gcl {
 		return Result;
 	}
 
-	size_t buffer::get_memory_size() const {
-		return this->CreateInfo.size;
+	command_list buffer::copy(buffer& aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize) {
+		VkBufferCopy Region{};
+		Region.srcOffset		= aSourceOffset;
+		Region.dstOffset		= aDestinationOffset;
+		Region.size				= aRegionSize;
+		std::vector<VkBufferCopy> RegionList;
+		RegionList.push_back(Region);
+		return this->copy(aSourceData, RegionList);
 	}
+
+	command_list buffer::copy(buffer& aSourceData, std::vector<VkBufferCopy> aRegionList) {
+		VkResult Result = VK_SUCCESS;
+		command_list CommandList = this->Context->create_command_list(device::operation::TRANSFER, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
+
+		VkCommandBufferBeginInfo BeginInfo{};
+		BeginInfo.sType 				= VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		BeginInfo.pNext 				= NULL;
+		BeginInfo.flags 				= 0;
+		BeginInfo.pInheritanceInfo 		= NULL;
+
+		// Fill out command buffer
+		Result = vkBeginCommandBuffer(CommandList[0], &BeginInfo);
+		vkCmdCopyBuffer(CommandList[0], aSourceData.Handle, this->Handle, aRegionList.size(), aRegionList.data());
+		Result = vkEndCommandBuffer(CommandList[0]);
+
+		return CommandList;
+	}
+
+	command_list buffer::copy(image& aSourceData, VkImageLayout aImageLayout, VkBufferImageCopy aRegion) {
+		std::vector<VkBufferImageCopy> RegionList;
+		RegionList.push_back(aRegion);
+		return this->copy(aSourceData, aImageLayout, RegionList);
+	}
+
+	command_list buffer::copy(image& aSourceData, VkImageLayout aImageLayout, std::vector<VkBufferImageCopy> aRegionList) {
+		VkResult Result = VK_SUCCESS;
+		command_list CommandList = this->Context->create_command_list(device::operation::TRANSFER, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
+
+		VkCommandBufferBeginInfo BeginInfo{};
+		BeginInfo.sType 				= VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		BeginInfo.pNext 				= NULL;
+		BeginInfo.flags 				= 0;
+		BeginInfo.pInheritanceInfo 		= NULL;
+
+		// Fill out command buffer
+		Result = vkBeginCommandBuffer(CommandList[0], &BeginInfo);
+		vkCmdCopyImageToBuffer(CommandList[0], aSourceData.Handle, aImageLayout, this->Handle, aRegionList.size(), aRegionList.data());
+		Result = vkEndCommandBuffer(CommandList[0]);
+
+		return CommandList;
+	}
+
+	VkResult buffer::write(void* aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize) {
+
+	}
+
+	VkResult buffer::write(void* aSourceData, std::vector<VkBufferCopy> aRegionList) {
+		device *Device = this->Context->parent();
+		int DeviceMemoryType = Device->get_memory_type(this->AllocateInfo.memoryTypeIndex);
+
+		if ((DeviceMemoryType & device::memory::HOST_VISIBLE) == device::memory::HOST_VISIBLE) {
+			// Host Visible, can be written to directly.
+		} else {
+			// Not Host Visible, use staging buffer. For large uploads, we will try something different.
+			size_t ChunkSize = 1024;
+			size_t RegionSize = 0;
+			size_t RegionOffset = 0;
+
+			// Not Host Visible, use staging buffer.
+			buffer StagingBuffer(
+				Context,
+				device::memory::HOST_VISIBLE | device::memory::HOST_COHERENT,
+				buffer::TRANSFER_SRC,
+				ChunkSize,
+				NULL
+			);
+
+
+		}
+	}
+
+	VkResult buffer::read(void* aDestinationData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize) {
+
+	}
+
+	VkResult buffer::read(void* aDestinationData, std::vector<VkBufferCopy> aRegionList) {
+
+	}
+
 
 	VkBuffer& buffer::handle() {
 		return this->Handle;

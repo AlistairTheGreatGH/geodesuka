@@ -245,7 +245,7 @@ namespace geodesuka::core::gcl {
 	}
 
 	void context::destroy_semaphore(VkSemaphore aSemaphore) {
-		this->destroy_semaphore(aSemaphore);
+		this->destroy_semaphore(util::list<VkSemaphore>(aSemaphore));
 	}
 
 	void context::destroy_semaphore(util::list<VkSemaphore> aSemaphoreList) {
@@ -255,6 +255,10 @@ namespace geodesuka::core::gcl {
 				vkDestroySemaphore(this->Handle, aSemaphoreList[i], NULL);
 			}
 		}
+	}
+
+	bool context::does_semaphore_exist(VkSemaphore aSemaphore) {
+		return this->Semaphore.exists(aSemaphore);
 	}
 
 	VkFence context::create_fence(VkFenceCreateFlags aFenceCreateFlags) {

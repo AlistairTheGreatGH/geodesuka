@@ -92,19 +92,7 @@ namespace geodesuka::core::gcl {
 		device* parent();
 		VkDevice handle();
 
-		std::mutex 			Mutex;
-
-	//private:
-
-		// -------------------- Engine Metadata -------------------- //
-		
-		// This data is used for engine execution.
-		std::mutex 						ExecutionMutex;
-		VkFence 						ExecutionFence[3];
-		std::vector<VkSubmitInfo> 		BackBatch[3];
-		std::vector<VkPresentInfoKHR>	BackPresentBatch;
-		std::vector<VkSubmitInfo> 		Submission[3];
-		std::vector<VkPresentInfoKHR>	Presentation;
+	private:
 
 		struct queue_family {
 			std::mutex*				Mutex;
@@ -120,9 +108,20 @@ namespace geodesuka::core::gcl {
 			size_t count() const;
 		};
 
+		// -------------------- Engine Metadata -------------------- //
+		
+		// This data is used for engine execution.
+		std::mutex 						ExecutionMutex;
+		VkFence 						ExecutionFence[3];
+		std::vector<VkSubmitInfo> 		BackBatch[3];
+		std::vector<VkPresentInfoKHR>	BackPresentBatch;
+		std::vector<VkSubmitInfo> 		Submission[3];
+		std::vector<VkPresentInfoKHR>	Presentation;
+
 		// -------------------- Context Data -------------------- //
 
 		// { T, C, G, GC, P }
+		std::mutex 									Mutex;
 		engine* 									Engine;
 		device* 									Device;
 		std::vector<int> 							QFI;					// Queue Family Index List
@@ -142,8 +141,6 @@ namespace geodesuka::core::gcl {
 		std::vector<queue_family> 					Queue;
 
 		int qfi_to_i(device::operation aOperation);
-
-		void zero_out();
 
 	};
 
