@@ -436,10 +436,15 @@ namespace geodesuka {
 		return 0;
 	}
 
-	// --------------- Engine Main Thread --------------- //
-	// The main thread is used to spawn backend threads along
-	// with the app thread.
-	// --------------- Engine Main Thread --------------- //
+	// --------------- Engine Main/Update Thread --------------- //
+	// This is the main thread of the application proper, and the update 
+	// thread of the engine. It updates all engine resources host side, and
+	// is responsible for handling user input. The update thread also
+	// manages system window objects as only the main thread is capable
+	// of handling user input. The update thread has an enforced time step
+	// where the thread will attempt to honor the designated time step. 
+	// The thread will be put to sleep if it finishes work early, and if
+	// it runs late the time difference will increase.
 	void engine::update(core::app* aApp) {
 		VkResult Result = VK_SUCCESS;
 		std::vector<std::vector<VkSubmitInfo>> Transfer;
@@ -459,12 +464,11 @@ namespace geodesuka {
 			
 			aApp->update(aApp->TimeStep.load());
 
-			aApp->Mutex.unlock();
-
 			Transfer = aApp->gather_transfer_operations();
 
 			Compute = aApp->gather_compute_operations();
 
+			aApp->Mutex.unlock();
 
 			// --------------- Per Device Context work is done here --------------- //
 
@@ -474,10 +478,12 @@ namespace geodesuka {
 
 	}
 
-	// --------------- Render Thread --------------- //
-	// The job of the render thread is to honor and schedule draw
-	// calls of respective render targets stored in memory.
-	// --------------- Render Thread --------------- //
+	// --------------- Engine Render Thread --------------- //
+	// The render thread of the geodesuka engine is responsible
+	// for honoring the designated frame rate of every render_target
+	// in existence. There is no enforced time step, but the render
+	// thread will iterate through all existing stages and render_targets
+	// and check if a render_target is ready to issue render commands.
 	void engine::render(core::app* aApp) {
 		VkResult Result = VK_SUCCESS;
 		std::vector<std::vector<VkSubmitInfo>> GraphicsAndCompute;
@@ -487,13 +493,13 @@ namespace geodesuka {
 
 		while (ThreadController.cycle(0.0)) {
 
-			//aApp->Mutex.lock();
+			aApp->Mutex.lock();
 
 			GraphicsAndCompute = aApp->gather_graphics_and_compute_operations();
 
 			Presentation = aApp->gather_presentation_operations();
 
-			//aApp->Mutex.unlock();
+			aApp->Mutex.unlock();
 
 			Result = this->execute_graphics_and_compute_operations(GraphicsAndCompute, Presentation);
 

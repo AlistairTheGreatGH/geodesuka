@@ -21,14 +21,14 @@ namespace geodesuka::core::gcl {
 		vkCreateCommandPool(aContext->handle(), &this->CreateInfo, NULL, &this->Handle);
 	}
 
-	command_pool::command_pool(context* aContext, int aFlags, device::operation aQueueFamilySupport) {
+	command_pool::command_pool(context* aContext, int aFlags, device::operation aDeviceOperation) {
 		this->Context = aContext;
 		this->Handle = VK_NULL_HANDLE;
 		if (this->Context == nullptr) return;
 		this->CreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 		this->CreateInfo.pNext = NULL;
 		this->CreateInfo.flags = aFlags;
-		this->CreateInfo.queueFamilyIndex = aContext->parent()->qfi(aQueueFamilySupport);
+		this->CreateInfo.queueFamilyIndex = aContext->parent()->qfi(aDeviceOperation);
 		vkCreateCommandPool(aContext->handle(), &this->CreateInfo, NULL, &this->Handle);
 	}
 

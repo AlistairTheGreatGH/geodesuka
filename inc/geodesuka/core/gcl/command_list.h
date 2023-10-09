@@ -10,7 +10,16 @@
 
 namespace geodesuka::core::gcl {
 
-	// ----- command_list ----- //
+	// --------------- command_list --------------- //
+	// The command_list object is a container class for VkCommandBuffer
+	// but with some additional features for the management of VkCommandBuffer
+	// objects. Consider them quality of life features to reduce code redundancy.
+	// A command_list is also a flexible container class, used to ultimately
+	// construct VkSubmitInfo objects for command execution. The command_list
+	// also contains VkSemaphore objects to manage depedencies between command_lists.
+	// A function is provided which created a VkSemaphore object to synchronize
+	// between two lists.
+
 	// command_list is just simply a container class with the ultimate
 	// goal of creating VkSubmitInfo structures. The nature of 
 	// VkSubmitInfo is that its members are unmodifiable. Therefore
@@ -28,25 +37,25 @@ namespace geodesuka::core::gcl {
 
 		friend class command_pool;
 
+		// Requirement is that command lists can only be created by command_pools.
 		command_list();
 		command_list(VkCommandBuffer aCommandBuffer);
 		command_list(uint32_t aCommandBufferCount);
 		command_list(uint32_t aCommandBufferCount, VkCommandBuffer* aCommandBufferList);
+		~command_list();
 
 		// Removes VK_NULL_HANDLE elements.
 		command_list prune() const;
 
 		// ---------- Dependency/Synchronization ---------- //
-		// This section is rather short, because setting up 
-		// dependencies between command_lists should be easy.
-		// This function logically operates as follows:
-		// Command List "A" Depends On The Output of "Fragment Shader" Stage of Command List "B"
-		// A.depends_on(S, B, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT)
-		void depends_on(VkSemaphore aDependencyLink, command_list& aProducer, VkPipelineStageFlags aProducerStageFlag);
-
-		void wait_on(VkSemaphore aWaitSemaphore, VkPipelineStageFlags aProducerStageFlag);
-
-		void signal_to(VkSemaphore aSignalSemaphore);
+		// command_lists can have designated dependencies between each other.
+		// The only requirement is that the command_lists in question must
+		// share the same device context. 
+		//
+		// This function syntatically operates as follows:
+		// Command list "A" depends on the "Fragment Shader" pipeline stage of command list "B"
+		// A.depends_on(B, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT)
+		void depends_on(command_list& aProducer, VkPipelineStageFlags aProducerStageFlag);
 
 		// A VkSubmitInfo object is created to reference the contents
 		// within command_list.
@@ -58,9 +67,6 @@ namespace geodesuka::core::gcl {
 		std::vector<VkSemaphore>				WaitSemaphore;
 		std::vector<VkPipelineStageFlags>		WaitStage;
 		std::vector<VkSemaphore>				SignalSemaphore;
-
-		bool is_waiting_on(VkSemaphore aSemaphore);
-		bool is_signalling(VkSemaphore aSemaphore);
 
 	};
 

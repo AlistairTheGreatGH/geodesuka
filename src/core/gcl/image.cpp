@@ -1574,37 +1574,37 @@ namespace geodesuka::core::gcl {
 
 	VkResult image::write(size_t aMemorySize, void* aData) {
 		VkResult Result = VK_SUCCESS;
-		command_list CommandList[2] = { command_list(1), command_list(1) };
-		util::list<VkFence> Fence = this->Context->create_fence(2);
-		VkSemaphore Semaphore = this->Context->create_semaphore();
+		//command_list CommandList[2] = { command_list(1), command_list(1) };
+		//util::list<VkFence> Fence = this->Context->create_fence(2);
+		//VkSemaphore Semaphore = this->Context->create_semaphore();
 
-		// Create staging buffer and prepare for transfer.
-		buffer StagingBuffer(
-			Context,
-			device::HOST_VISIBLE | device::HOST_COHERENT,
-			buffer::TRANSFER_SRC | buffer::TRANSFER_DST,
-			aMemorySize,
-			aData
-		);
+		//// Create staging buffer and prepare for transfer.
+		//buffer StagingBuffer(
+		//	Context,
+		//	device::HOST_VISIBLE | device::HOST_COHERENT,
+		//	buffer::TRANSFER_SRC | buffer::TRANSFER_DST,
+		//	aMemorySize,
+		//	aData
+		//);
 
-		// Command Lists for execution.
-		// This is a TRANSFER operation.
-		CommandList[0][0] = (*this << StagingBuffer);
-		// This is a GRAPHICS operation.
-		CommandList[1][0] = this->generate_mipmaps(VK_FILTER_NEAREST);
-		// Execution dependency.
-		CommandList[1].depends_on(Semaphore, CommandList[0], VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+		//// Command Lists for execution.
+		//// This is a TRANSFER operation.
+		//CommandList[0][0] = (*this << StagingBuffer);
+		//// This is a GRAPHICS operation.
+		//CommandList[1][0] = this->generate_mipmaps(VK_FILTER_NEAREST);
+		//// Execution dependency.
+		////CommandList[1].depends_on(Semaphore, CommandList[0], VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 
-		// Execute operations.
-		Result = this->Context->execute(device::operation::TRANSFER, CommandList[0], Fence[0]);
-		Result = this->Context->execute(device::operation::GRAPHICS, CommandList[1], Fence[1]);
-		Result = this->Context->wait(Fence, VK_TRUE);
+		//// Execute operations.
+		//Result = this->Context->execute(device::operation::TRANSFER, CommandList[0], Fence[0]);
+		//Result = this->Context->execute(device::operation::GRAPHICS, CommandList[1], Fence[1]);
+		//Result = this->Context->wait(Fence, VK_TRUE);
 
-		// Free up resources.
-		this->Context->destroy_command_list(device::operation::TRANSFER, CommandList[0]);
-		this->Context->destroy_command_list(device::operation::GRAPHICS, CommandList[1]);
-		this->Context->destroy_fence(Fence);
-		this->Context->destroy_semaphore(Semaphore);
+		//// Free up resources.
+		//this->Context->destroy_command_list(device::operation::TRANSFER, CommandList[0]);
+		//this->Context->destroy_command_list(device::operation::GRAPHICS, CommandList[1]);
+		//this->Context->destroy_fence(Fence);
+		//this->Context->destroy_semaphore(Semaphore);
 
 		return Result;
 	}

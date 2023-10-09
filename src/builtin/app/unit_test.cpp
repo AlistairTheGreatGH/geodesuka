@@ -306,24 +306,23 @@ namespace geodesuka::builtin::app {
 
 		buffer ReturnBuffer(Context, HostBufferCreateInfo, BufferSize, NULL);
 
-		{
-			util::list<VkFence> Fence = Context->create_fence(2);
-			VkSemaphore Semaphore = Context->create_semaphore();
-			command_list CommandList[2] = { command_list(1), command_list(1) };
+		//{
+		//	util::list<VkFence> Fence = Context->create_fence(2);
+		//	command_list CommandList[2] = { command_list(1), command_list(1) };
 
-			CommandList[0][0] = (DeviceBuffer << SourceBuffer);
-			CommandList[1][0] = (DeviceBuffer >> ReturnBuffer);
-			CommandList[1].depends_on(Semaphore, CommandList[0], VK_PIPELINE_STAGE_TRANSFER_BIT);
+		//	CommandList[0][0] = (DeviceBuffer << SourceBuffer);
+		//	CommandList[1][0] = (DeviceBuffer >> ReturnBuffer);
+		//	CommandList[1].depends_on(CommandList[0], VK_PIPELINE_STAGE_TRANSFER_BIT);
 
-			Result = Context->execute(device::operation::TRANSFER, CommandList[0], Fence[0]);
-			Result = Context->execute(device::operation::TRANSFER, CommandList[1], Fence[1]);
-			Result = vkWaitForFences(Context->handle(), 2, Fence.Handle.data(), VK_TRUE, UINT64_MAX);
+		//	Result = Context->execute(device::operation::TRANSFER, CommandList[0], Fence[0]);
+		//	Result = Context->execute(device::operation::TRANSFER, CommandList[1], Fence[1]);
+		//	Result = vkWaitForFences(Context->handle(), 2, Fence.Handle.data(), VK_TRUE, UINT64_MAX);
 
-			Context->destroy_command_list(device::operation::TRANSFER, CommandList[0]);
-			Context->destroy_command_list(device::operation::TRANSFER, CommandList[1]);
-			Context->destroy_semaphore(Semaphore);
-			Context->destroy_fence(Fence);
-		}
+		//	Context->destroy_command_list(device::operation::TRANSFER, CommandList[0]);
+		//	Context->destroy_command_list(device::operation::TRANSFER, CommandList[1]);
+		//	Context->destroy_semaphore(Semaphore);
+		//	Context->destroy_fence(Fence);
+		//}
 		
 		// Gather data back from return buffer.
 		ReturnBuffer.read(BufferSize, ReturnData);
@@ -365,29 +364,29 @@ namespace geodesuka::builtin::app {
 		
 		buffer ReturnImage(Context, HostBufferCreateInfo, TextureSize, NULL);
 
-		{
-			VkResult Result = VK_SUCCESS;
-			VkFence Fence[2];
-			VkSemaphore Semaphore;
-			gcl::command_list CommandList[2] = { command_list(1), command_list(1) };
+		//{
+		//	VkResult Result = VK_SUCCESS;
+		//	VkFence Fence[2];
+		//	VkSemaphore Semaphore;
+		//	gcl::command_list CommandList[2] = { command_list(1), command_list(1) };
 
-			Fence[0] = Context->create_fence();
-			Fence[1] = Context->create_fence();
-			Semaphore = Context->create_semaphore();
-			CommandList[0][0] = (Texture2 << Texture1);
-			CommandList[1][0] = (Texture2 >> ReturnImage);
-			CommandList[1].depends_on(Semaphore, CommandList[0], VK_PIPELINE_STAGE_TRANSFER_BIT);
+		//	Fence[0] = Context->create_fence();
+		//	Fence[1] = Context->create_fence();
+		//	Semaphore = Context->create_semaphore();
+		//	CommandList[0][0] = (Texture2 << Texture1);
+		//	CommandList[1][0] = (Texture2 >> ReturnImage);
+		//	CommandList[1].depends_on(Semaphore, CommandList[0], VK_PIPELINE_STAGE_TRANSFER_BIT);
 
-			Result = Context->execute(gcl::device::operation::TRANSFER, CommandList[0], Fence[0]);
-			Result = Context->execute(gcl::device::operation::TRANSFER, CommandList[1], Fence[1]);
-			Result = vkWaitForFences(Context->handle(), 2, Fence, VK_TRUE, UINT64_MAX);
+		//	Result = Context->execute(gcl::device::operation::TRANSFER, CommandList[0], Fence[0]);
+		//	Result = Context->execute(gcl::device::operation::TRANSFER, CommandList[1], Fence[1]);
+		//	Result = vkWaitForFences(Context->handle(), 2, Fence, VK_TRUE, UINT64_MAX);
 
-			Context->destroy_fence(Fence[0]);
-			Context->destroy_fence(Fence[1]);
-			Context->destroy_command_list(gcl::device::operation::TRANSFER, CommandList[0]);
-			Context->destroy_command_list(gcl::device::operation::TRANSFER, CommandList[1]);
-			Context->destroy_semaphore(Semaphore);
-		}
+		//	Context->destroy_fence(Fence[0]);
+		//	Context->destroy_fence(Fence[1]);
+		//	Context->destroy_command_list(gcl::device::operation::TRANSFER, CommandList[0]);
+		//	Context->destroy_command_list(gcl::device::operation::TRANSFER, CommandList[1]);
+		//	Context->destroy_semaphore(Semaphore);
+		//}
 
 		ReturnImage.read(TextureSize, TextureReturn);
 

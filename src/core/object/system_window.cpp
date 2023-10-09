@@ -539,8 +539,8 @@ namespace geodesuka::core::object {
 			);
 			Result = vkEndCommandBuffer(PostRenderOperations[i][0]);
 
-			PreRenderOperations[i].wait_on(RenderWait, PipelineStageFlags);
-			PostRenderOperations[i].signal_to(RenderComplete);
+			//PreRenderOperations[i].wait_on(RenderWait, PipelineStageFlags);
+			//PostRenderOperations[i].signal_to(RenderComplete);
 		}
 
 		return Result;

@@ -17,14 +17,14 @@ namespace geodesuka::core::gcl {
 		friend class command_pool;
 
 		enum flags {
-			TRANSIENT_BIT				= 0x00000001,
-			RESET_COMMAND_BUFFER_BIT	= 0x00000002,
-			PROTECTED_BIT				= 0x00000004,
+    		ONE_TIME_SUBMIT_BIT = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+    		RENDER_PASS_CONTINUE_BIT = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+    		SIMULTANEOUS_USE_BIT = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
 		};
 
 		enum level {
-			PRIMARY,
-			SECONDARY
+    		PRIMARY = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+    		SECONDARY = VK_COMMAND_BUFFER_LEVEL_SECONDARY,
 		};
 
 		// Use for command buffer writing.
@@ -32,7 +32,7 @@ namespace geodesuka::core::gcl {
 
 		command_pool();
 		command_pool(context* aContext, int aFlags, uint32_t aQueueFamilyIndex);
-		command_pool(context* aContext, int aFlags, device::operation aQueueFamilySupport);
+		command_pool(context* aContext, int aFlags, device::operation aDeviceOperation);
 		~command_pool();
 
 		// Creates a single command buffer from the chosen family support option.
@@ -49,10 +49,11 @@ namespace geodesuka::core::gcl {
 
 	private:
 
+		VkCommandPoolCreateFlags Flags;
 		context* Context;
 		VkCommandPoolCreateInfo CreateInfo{};
 		VkCommandPool Handle;
-		command_list CommandList;
+		util::list<VkCommandBuffer> CommandList;
 
 	};
 

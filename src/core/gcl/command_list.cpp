@@ -13,6 +13,15 @@ namespace geodesuka::core::gcl {
 
 	command_list::command_list() { }
 
+	command_list::~command_list() {
+		for (size_t i = 0; i < this->WaitSemaphore.size(); i++) {
+			this->Context->destroy_semaphore(this->WaitSemaphore[i]);
+		}
+		for (size_t i = 0; i < this->SignalSemaphore.size(); i++) {
+			this->Context->destroy_semaphore(this->SignalSemaphore[i]);
+		}
+	}
+
 	command_list::command_list(VkCommandBuffer aCommandBuffer) {
 		this->Handle.push_back(aCommandBuffer);
 	}
@@ -56,27 +65,20 @@ namespace geodesuka::core::gcl {
 		return Pruned;
 	}
 
-	void command_list::depends_on(VkSemaphore aDependencyLink, command_list& aProducer, VkPipelineStageFlags aProducerStageFlag) {
-		if (!aProducer.is_signalling(aDependencyLink)) {
-			aProducer.SignalSemaphore.push_back(aDependencyLink);
+	// Due to the nature of semaphores, a single semaphore cannot signal multiple waiting command
+	// lists. Therefore a unique semaphore must exist between ever command_list that wishes to wait
+	// on another. If that is the case, then we might as well generate a semaphore everytime we want
+	// to designate a dependency between command_lists.
+	void command_list::depends_on(command_list& aProducer, VkPipelineStageFlags aProducerStageFlag) {
+		// Check if command_lists were created by the same device context, if not, throw exception.
+		if ((this->Context == aProducer.Context) && (this->Context != nullptr)) {
+			throw std::runtime_error("command_list::depends_on: requires that both command_lists share the same device context that they were created by!");
 		}
-		if (!this->is_waiting_on(aDependencyLink)) {
-			this->WaitSemaphore.push_back(aDependencyLink);
-			this->WaitStage.push_back(aProducerStageFlag);
-		}
-	}
-
-	void command_list::wait_on(VkSemaphore aWaitSemaphore, VkPipelineStageFlags aProducerStageFlag) {
-		if (!this->is_waiting_on(aWaitSemaphore)) {
-			this->WaitSemaphore.push_back(aWaitSemaphore);
-			this->WaitStage.push_back(aProducerStageFlag);
-		}
-	}
-
-	void command_list::signal_to(VkSemaphore aSignalSemaphore) {
-		if (!this->is_signalling(aSignalSemaphore)) {
-			this->SignalSemaphore.push_back(aSignalSemaphore);
-		}
+		// Create new semaphore.
+		VkSemaphore NewSemaphore = this->Context->create_semaphore();
+		// Add the new semaphore to their respective signal/wait lists.
+		aProducer.SignalSemaphore.push_back(NewSemaphore);
+		this->WaitSemaphore.push_back(NewSemaphore);
 	}
 
 	VkSubmitInfo command_list::build() const {
@@ -91,20 +93,6 @@ namespace geodesuka::core::gcl {
 		SubmissionBuild.signalSemaphoreCount	= this->SignalSemaphore.size();
 		SubmissionBuild.pSignalSemaphores		= this->SignalSemaphore.data();
 		return SubmissionBuild;
-	}
-
-	bool command_list::is_waiting_on(VkSemaphore aSemaphore) {
-		for (size_t i = 0; i < WaitSemaphore.size(); i++) {
-			if (WaitSemaphore[i] == aSemaphore) return true;
-		}
-		return false;
-	}
-
-	bool command_list::is_signalling(VkSemaphore aSemaphore) {
-		for (size_t i = 0; i < SignalSemaphore.size(); i++) {
-			if (SignalSemaphore[i] == aSemaphore) return true;
-		}
-		return false;
 	}
 
 	std::vector<VkSubmitInfo> convert(const std::vector<command_list>& aCommandList) {

@@ -10,12 +10,7 @@ using namespace geodesuka::core;
 
 // Using entry point for app.
 int main(int aCmdArgCount, char* aCmdArgList[]) {
-
-
-	math::vec2<float> a = math::vec2<float>(1.0f, 2.0f);
-	size_t Size = sizeof(math::vec2<float>);
-	a = 3.0f;	
-
+	
 	// Instance Layers & Extensions.
 	std::vector<const char*> Layer = {
 		"VK_LAYER_KHRONOS_validation"

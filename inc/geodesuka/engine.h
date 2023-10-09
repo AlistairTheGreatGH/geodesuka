@@ -2,30 +2,6 @@
 #ifndef GEODESUKA_ENGINE_H
 #define GEODESUKA_ENGINE_H
 
-/*
-
-// ------------------------- TODO: ------------------------- \\
-
-// ------------------------- Notes ------------------------- \\
-As of right now geodesuka is the primary namespace. Engine
-is the factory manager of all objects, including memory. Can
-be used to 
-
-\\ ------------------------- Notes ------------------------- //
-*/
-
-/* --------------- System Macros (Tweak) --------------- */
-
-/*
-Disabled Warnings:
-C4244
-C6386
-C26451
-
-Include: $(ProjectDir)..\glslang
-
-*/
-
 /* --------------- Standard C Libraries --------------- */
 
 /* --------------- Standard C++ Libraries --------------- */

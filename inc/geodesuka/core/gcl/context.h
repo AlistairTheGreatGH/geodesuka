@@ -52,6 +52,7 @@ namespace geodesuka::core::gcl {
 		util::list<VkSemaphore> create_semaphore(int aCount);
 		void destroy_semaphore(VkSemaphore aSemaphore);
 		void destroy_semaphore(util::list<VkSemaphore> aSemaphoreList);
+		bool does_semaphore_exist(VkSemaphore aSemaphore);
 
 		// This series of methods are for the creation and destruction of fences for the synchronization
 		// between execution of VkSubmitInfos and Presentation.
