@@ -52,12 +52,10 @@ namespace geodesuka::core::gcl {
 		};
 
 		buffer();
-		buffer(context* aContext, create_info aCreateInfo, int aVertexCount, variable aVertexLayout);
-		buffer(context* aContext, create_info aCreateInfo, int aVertexCount, variable aVertexLayout, void* aVertexData);
-		buffer(context* aContext, create_info aCreateInfo, size_t aBufferSize);
-		buffer(context* aContext, create_info aCreateInfo, size_t aBufferSize, void* aBufferData);
-		buffer(context* aContext, uint aMemoryType, uint aBufferUsage, int aCount, variable aMemoryLayout, void* aBufferData);
-		buffer(context* aContext, uint aMemoryType, uint aBufferUsage, size_t aMemorySize, void* aBufferData);
+		buffer(context* aContext, create_info aCreateInfo, int aVertexCount, variable aVertexLayout, void* aVertexData = NULL);
+		buffer(context* aContext, uint aMemoryType, uint aBufferUsage, int aVertexCount, variable aVertexLayout, void* aVertexData = NULL);
+		buffer(context* aContext, create_info aCreateInfo, size_t aBufferSize, void* aBufferData = NULL);
+		buffer(context* aContext, uint aMemoryType, uint aBufferUsage, size_t aBufferSize, void* aBufferData = NULL);
 		buffer(buffer& aInput);
 		buffer(buffer&& aInput) noexcept;
 		~buffer();
@@ -93,10 +91,6 @@ namespace geodesuka::core::gcl {
 
 		VkResult create(context* aContext, uint aMemoryType, uint aBufferUsage, size_t aMemorySize, void* aBufferData);
 		VkBuffer create_handle(size_t aSize, uint aUsage);
-
-		VkResult create_device_memory(context* aContext, create_info aCreateInfo, size_t aMemorySize);
-		VkBufferCreateInfo make_buffer_create_info(size_t aMemorySize, int aBufferUsage);
-		VkMemoryAllocateInfo make_buffer_allocate_info(context* aContext, device* aDevice, int aMemoryType);
 
 		void clear_device_memory();
 

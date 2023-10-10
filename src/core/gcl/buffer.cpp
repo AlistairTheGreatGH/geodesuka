@@ -30,26 +30,7 @@ namespace geodesuka::core::gcl {
 		size_t TotalSize = aVertexCount * aVertexLayout.size();
 		this->zero_out();
 
-		// Allocate Device Memory.
-		Result = this->create_device_memory(aContext, aCreateInfo, TotalSize);
-
-		// Write to created buffer
-		if (aVertexData != NULL) {
-			Result = this->write(TotalSize, aVertexData);
-		}
-	}
-
-	buffer::buffer(context* aContext, create_info aCreateInfo, size_t aBufferSize, void* aBufferData) {
-		VkResult Result = VK_SUCCESS;
-		this->zero_out();
-
-		// Allocate Device Memory.
-		Result = this->create_device_memory(aContext, aCreateInfo, aBufferSize);
-
-		// Write to created buffer
-		if (aBufferData != NULL) {
-			Result = this->write(aBufferSize, aBufferData);
-		}
+		Result = this->create(aContext, aCreateInfo.MemoryType, aCreateInfo.BufferUsage, TotalSize, aVertexData);
 	}
 
 	buffer::buffer(context* aContext, uint aMemoryType, uint aBufferUsage, int aVertexCount, variable aVertexLayout, void* aVertexData) {
@@ -57,13 +38,15 @@ namespace geodesuka::core::gcl {
 		size_t TotalSize = aVertexCount * aVertexLayout.size();
 		this->zero_out();
 
-		// Create memory for vertex buffer.
-		Result = this->create_device_memory(aContext, create_info(aMemoryType, aBufferUsage), TotalSize);
+		Result = this->create(aContext, aMemoryType, aBufferUsage, TotalSize, aVertexData);
+	}
 
-		// Write to created buffer
-		if (aVertexData != NULL) {
-			Result = this->write(TotalSize, aVertexData);
-		}		
+	buffer::buffer(context* aContext, create_info aCreateInfo, size_t aBufferSize, void* aBufferData) {
+		VkResult Result = VK_SUCCESS;
+		this->zero_out();
+
+		// Allocate Device Memory and Write Buffer
+		Result = this->create(aContext, aCreateInfo.MemoryType, aCreateInfo.BufferUsage, aBufferSize, aBufferData);
 	}
 
 	buffer::buffer(context* aContext, uint aMemoryType, uint aBufferUsage, size_t aBufferSize, void* aBufferData) {
@@ -71,12 +54,7 @@ namespace geodesuka::core::gcl {
 		this->zero_out();
 
 		// Create memory for vertex buffer.
-		Result = this->create_device_memory(aContext, create_info(aMemoryType, aBufferUsage), aBufferSize);
-		aContext->parent_engine();
-		// Write to created buffer
-		if (aBufferData != NULL) {
-			Result = this->write(aBufferSize, aBufferData);
-		}
+		Result = this->create(aContext, aMemoryType, aBufferUsage, aBufferSize, aBufferData);
 	}
 
 	buffer::buffer(buffer& aInput) {
@@ -89,7 +67,7 @@ namespace geodesuka::core::gcl {
 			create_info RecreateInfo;
 			RecreateInfo.MemoryType		= aInput.Context->parent()->get_memory_type(aInput.AllocateInfo.memoryTypeIndex);
 			RecreateInfo.BufferUsage	= aInput.CreateInfo.usage;
-			Result = this->create_device_memory(aInput.Context, RecreateInfo, aInput.CreateInfo.size);
+			Result = this->create(aInput.Context, RecreateInfo, aInput.CreateInfo.size);
 		}
 
 		if (Result == VK_SUCCESS) {
@@ -148,9 +126,7 @@ namespace geodesuka::core::gcl {
 	buffer& buffer::operator=(buffer&& aRhs) noexcept {
 		this->clear_device_memory();
 		this->Context		= aRhs.Context;
-		this->CreateInfo	= aRhs.CreateInfo;
 		this->Handle		= aRhs.Handle;
-		this->AllocateInfo	= aRhs.AllocateInfo;
 		this->MemoryHandle	= aRhs.MemoryHandle;
 		aRhs.zero_out();
 		return *this;
@@ -236,6 +212,11 @@ namespace geodesuka::core::gcl {
 				NULL
 			);
 
+			for (size_t i = 0; i < aRegionList.size(); i++) {
+
+
+
+			}
 
 		}
 	}
@@ -244,7 +225,7 @@ namespace geodesuka::core::gcl {
 		std::vector<VkBufferCopy> RegionList;
 		VkBufferCopy Region{ aSourceOffset, aDestinationOffset, aRegionSize };
 		RegionList.push_back(Region);
-		return this->read(aSourceData, RegionList);
+		return this->read(aDestinationData, RegionList);
 	}
 
 	VkResult buffer::read(void* aDestinationData, std::vector<VkBufferCopy> aRegionList) {
@@ -278,6 +259,8 @@ namespace geodesuka::core::gcl {
 		this->MemoryHandle = this->Context->allocate_memory(MemoryRequirements, aMemoryType);
 
 		Result = vkBindBufferMemory(this->Context->handle(), this->Handle, this->MemoryHandle, 0);
+
+		this->write(aBufferData, 0, 0, aMemorySize);
 
 		return Result;
 	}
