@@ -228,6 +228,13 @@ namespace geodesuka::core::gcl {
 		int MemoryTypeIndex = -1;
 		VkPhysicalDeviceMemoryProperties MemoryProperties = this->get_memory_properties();
 
+		for (uint32_t i = 0; i < MemoryProperties.memoryTypeCount; i++) {
+			size_t OptionCount = 0;
+			for (uint32_t j = 0; j < sizeof(uint32_t); j++) {
+				
+			}
+		}
+
 		// Search for exact memory type index.
 		for (uint32_t i = 0; i < MemoryProperties.memoryTypeCount; i++) {
 			if (((aMemoryRequirements.memoryTypeBits & (1 << i)) >> i) && (MemoryProperties.memoryTypes[i].propertyFlags == aMemoryType)) {

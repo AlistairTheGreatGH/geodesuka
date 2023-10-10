@@ -78,13 +78,21 @@ namespace geodesuka::core::gcl {
 
 		VkBuffer& handle();
 
+		VkMemoryRequirements get_memory_requirements() const;
+
 	private:
 
 		context*					Context;
-		VkBufferCreateInfo			CreateInfo{};
+		
+		size_t 						Size;
+		uint 						Usage;
 		VkBuffer					Handle;
-		VkMemoryAllocateInfo		AllocateInfo{};
+
+		uint 						MemoryType;
 		VkDeviceMemory				MemoryHandle;
+
+		VkResult create(context* aContext, uint aMemoryType, uint aBufferUsage, size_t aMemorySize, void* aBufferData);
+		VkBuffer create_handle(size_t aSize, uint aUsage);
 
 		VkResult create_device_memory(context* aContext, create_info aCreateInfo, size_t aMemorySize);
 		VkBufferCreateInfo make_buffer_create_info(size_t aMemorySize, int aBufferUsage);

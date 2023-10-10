@@ -305,6 +305,22 @@ namespace geodesuka::core::gcl {
 		return MemoryRequirements;
 	}
 
+	// Memory Allocation.
+	VkDeviceMemory context::allocate_memory(VkMemoryRequirements aMemoryRequirements, uint aMemoryType) {
+		VkDeviceMemory MemoryHandle = VK_NULL_HANDLE;
+		VkMemoryAllocateInfo AllocateInfo{};
+		AllocateInfo.sType				= VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		AllocateInfo.pNext				= NULL;
+		AllocateInfo.allocationSize		= aMemoryRequirements.size;
+		AllocateInfo.memoryTypeIndex	= this->Device->get_memory_type_index(aMemoryRequirements, aMemoryType);
+		vkAllocateMemory(this->Handle, &AllocateInfo, NULL, &MemoryHandle);
+		return MemoryHandle;
+	}
+
+	void context::free_memory(VkDeviceMemory aMemoryHandle) {
+
+	}
+
 	VkResult context::execute(device::operation aQFEO, VkCommandBuffer aCommandBuffer, VkFence aFence) {
 		VkSubmitInfo SubmitInfo{};
 		SubmitInfo.sType				= VK_STRUCTURE_TYPE_SUBMIT_INFO;

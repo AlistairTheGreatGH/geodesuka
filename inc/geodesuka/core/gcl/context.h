@@ -67,7 +67,7 @@ namespace geodesuka::core::gcl {
 		VkMemoryRequirements get_image_memory_requirements(VkImage aImageHandle);
 
 		// Memory Allocation.
-		VkDeviceMemory allocate_memory(size_t aSize, VkMemoryRequirements aMemoryRequirements, device::memory aMemoryType);
+		VkDeviceMemory allocate_memory(VkMemoryRequirements aMemoryRequirements, uint aMemoryType);
 		void free_memory(VkDeviceMemory aMemoryHandle);
 
 		// --------------- Execution --------------- //
