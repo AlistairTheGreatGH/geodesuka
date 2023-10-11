@@ -196,7 +196,6 @@ namespace geodesuka::core::gcl {
 
 	VkResult buffer::write(void* aSourceData, std::vector<VkBufferCopy> aRegionList) {
 		VkResult Result = VK_SUCCESS;
-
 		if ((this->MemoryType & device::memory::HOST_VISIBLE) == device::memory::HOST_VISIBLE) {
 			// Host Visible, can be written to directly.
 			void* HostMemory = NULL;
@@ -257,6 +256,7 @@ namespace geodesuka::core::gcl {
 			}
 
 		}
+		return Result;
 	}
 
 	VkResult buffer::read(void* aDestinationData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize) {
