@@ -72,15 +72,23 @@ namespace geodesuka::core::gcl {
 
 		// --------------- Execution --------------- //
 		
-		VkResult execute(device::operation aQFS, VkCommandBuffer aCommandBuffer, VkFence aFence);
-		VkResult execute(device::operation aQFS, const command_list& aCommandList, VkFence aFence);
-		VkResult execute(device::operation aQFS, const std::vector<gcl::command_list>& aCommandBatch, VkFence aFence);
-		VkResult execute(device::operation aQFS, const std::vector<VkSubmitInfo>& aSubmissionList, VkFence aFence);
+		VkResult wait(VkFence aFence, VkBool32 aWaitOnAll = VK_TRUE);
+		VkResult wait(util::list<VkFence> aFenceList, VkBool32 aWaitOnAll = VK_TRUE);
+		
+		VkResult execute(device::operation aDeviceOperation, VkCommandBuffer aCommandBuffer, VkFence aFence);
+		VkResult execute(device::operation aDeviceOperation, const command_list& aCommandList, VkFence aFence);
+		VkResult execute(device::operation aDeviceOperation, const std::vector<gcl::command_list>& aCommandBatch, VkFence aFence);
+		VkResult execute(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList, VkFence aFence);
 		VkResult execute(const std::vector<VkPresentInfoKHR>& aPresentationList);
-		VkResult execute(device::operation aQFS, const std::vector<VkSubmitInfo>& aSubmissionList, const std::vector<VkPresentInfoKHR>& aPresentationList, VkFence aFence);
 
-		VkResult wait(VkFence aFence, VkBool32 aWaitOnAll);
-		VkResult wait(util::list<VkFence> aFenceList, VkBool32 aWaitOnAll);
+		VkResult execute_and_wait(device::operation aDeviceOperation, VkCommandBuffer aCommandBuffer);
+		VkResult execute_and_wait(device::operation aDeviceOperation, const command_list& aCommandList);
+		VkResult execute_and_wait(device::operation aDeviceOperation, const std::vector<gcl::command_list>& aCommandBatch);
+		VkResult execute_and_wait(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList);
+		VkResult execute_and_wait(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList, const std::vector<VkPresentInfoKHR>& aPresentationList);
+
+		// Real execution
+		VkResult execute(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList, const std::vector<VkPresentInfoKHR>& aPresentationList, VkFence aFence);
 
 		bool available(device::operation aOperation);
 		int qfi(device::operation aOperation);

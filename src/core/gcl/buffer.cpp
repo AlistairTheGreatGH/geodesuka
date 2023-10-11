@@ -5,6 +5,9 @@
 #include <assert.h>
 
 #include <vector>
+#include <algorithm>
+
+#include <geodesuka/core/gcl/config.h>
 
 // Used to interact with texture class
 #include <geodesuka/core/gcl/image.h>
@@ -192,29 +195,64 @@ namespace geodesuka::core::gcl {
 	}
 
 	VkResult buffer::write(void* aSourceData, std::vector<VkBufferCopy> aRegionList) {
-		device *Device = this->Context->parent();
-		int DeviceMemoryType = Device->get_memory_type(this->AllocateInfo.memoryTypeIndex);
+		VkResult Result = VK_SUCCESS;
 
-		if ((DeviceMemoryType & device::memory::HOST_VISIBLE) == device::memory::HOST_VISIBLE) {
+		if ((this->MemoryType & device::memory::HOST_VISIBLE) == device::memory::HOST_VISIBLE) {
 			// Host Visible, can be written to directly.
+			void* HostMemory = NULL;
+			Result = vkMapMemory(this->Context->handle(), this->MemoryHandle, 0, VK_WHOLE_SIZE, 0, &HostMemory);
+			for (size_t i = 0; i < aRegionList.size(); i++) {
+				// Calculate offset addresses
+				uintptr_t TargetAddress = (uintptr_t)HostMemory + aRegionList[i].dstOffset;
+				uintptr_t SourceAddress = (uintptr_t)aSourceData + aRegionList[i].srcOffset;
+				// Copy specified targets.
+				memcpy((void*)TargetAddress, (void*)SourceAddress, aRegionList[i].size);
+			}
+			vkUnmapMemory(this->Context->handle(), this->MemoryHandle);
 		} else {
 			// Not Host Visible, use staging buffer. For large uploads, we will try something different.
-			size_t ChunkSize = 1024;
-			size_t RegionSize = 0;
-			size_t RegionOffset = 0;
+			// Say we have a large model, we want to use a staging buffer that is small to upload chunks
+			// to device memory.
+			size_t StagingBufferSize = GCL_TRANSFER_CHUNK_SIZE;
 
 			// Not Host Visible, use staging buffer.
 			buffer StagingBuffer(
 				Context,
 				device::memory::HOST_VISIBLE | device::memory::HOST_COHERENT,
 				buffer::TRANSFER_SRC,
-				ChunkSize,
-				NULL
+				StagingBufferSize
 			);
 
+			// Copy each memory region to target buffer.
 			for (size_t i = 0; i < aRegionList.size(); i++) {
 
+				// size_t TotalSize = aRegionList[i].size;
+				// size_t RemainderSize = TotalSize % ChunkSize; // Calculates last remainder of data.
+				// size_t ChunkCount = ((TotalSize - RemainderSize) / ChunkSize) + 1;
+				
+				size_t TotalSize = aRegionList[i].size;
+				size_t Remainder = TotalSize;
+				do {
 
+					// Calculate offsets for transfer.
+					size_t Offset = TotalSize - Remainder;
+
+					// Insure that we do not exceed the staging buffer size.
+					size_t ChunkSize = std::clamp(Remainder, (size_t)0, StagingBufferSize);
+
+					// Write data to staging buffer, if less than ChunkSize, then we are done.
+					StagingBuffer.write(aSourceData, aRegionList[i].srcOffset + Offset, 0, ChunkSize);
+
+					// generate transfer commands.
+					command_list CommandList = this->copy(StagingBuffer, 0, aRegionList[i].dstOffset + Offset, ChunkSize);
+
+					// Execute command buffer
+					this->Context->execute_and_wait(device::operation::TRANSFER, CommandList);
+
+					// Recalculate remaining data to send.
+					Remainder -= ChunkSize;
+
+				} while (Remainder > 0);
 
 			}
 

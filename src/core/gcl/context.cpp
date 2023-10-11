@@ -307,21 +307,36 @@ namespace geodesuka::core::gcl {
 
 	// Memory Allocation.
 	VkDeviceMemory context::allocate_memory(VkMemoryRequirements aMemoryRequirements, uint aMemoryType) {
+		VkResult Result = VK_SUCCESS;
 		VkDeviceMemory MemoryHandle = VK_NULL_HANDLE;
 		VkMemoryAllocateInfo AllocateInfo{};
 		AllocateInfo.sType				= VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
 		AllocateInfo.pNext				= NULL;
 		AllocateInfo.allocationSize		= aMemoryRequirements.size;
 		AllocateInfo.memoryTypeIndex	= this->Device->get_memory_type_index(aMemoryRequirements, aMemoryType);
-		vkAllocateMemory(this->Handle, &AllocateInfo, NULL, &MemoryHandle);
+		Result = vkAllocateMemory(this->Handle, &AllocateInfo, NULL, &MemoryHandle);
+		this->Memory |= MemoryHandle;
 		return MemoryHandle;
 	}
 
 	void context::free_memory(VkDeviceMemory aMemoryHandle) {
-
+		// Check if memory exists in list.
+		if (this->Memory.exists(aMemoryHandle)) {
+			// If exists; remove, then delete.
+			this->Memory -= aMemoryHandle;
+			vkFreeMemory(this->Handle, aMemoryHandle, NULL);
+		}
 	}
 
-	VkResult context::execute(device::operation aQFEO, VkCommandBuffer aCommandBuffer, VkFence aFence) {
+	VkResult context::wait(VkFence aFence, VkBool32 aWaitOnAll) {
+		return vkWaitForFences(this->Handle, 1, &aFence, aWaitOnAll, UINT64_MAX);
+	}
+
+	VkResult context::wait(util::list<VkFence> aFenceList, VkBool32 aWaitOnAll) {
+		return vkWaitForFences(this->Handle, aFenceList.count(), aFenceList.Handle.data(), aWaitOnAll, UINT64_MAX);
+	}
+
+	VkResult context::execute(device::operation aDeviceOperation, VkCommandBuffer aCommandBuffer, VkFence aFence) {
 		VkSubmitInfo SubmitInfo{};
 		SubmitInfo.sType				= VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		SubmitInfo.pNext				= NULL;
@@ -334,22 +349,22 @@ namespace geodesuka::core::gcl {
 		SubmitInfo.pSignalSemaphores	= NULL;
 		std::vector<VkSubmitInfo> Submission;
 		Submission.push_back(SubmitInfo);
-		return this->execute(aQFEO, Submission, aFence);
+		return this->execute(aDeviceOperation, Submission, aFence);
 	}
 
-	VkResult context::execute(device::operation aQFEO, const command_list& aCommandList, VkFence aFence) {
+	VkResult context::execute(device::operation aDeviceOperation, const command_list& aCommandList, VkFence aFence) {
 		VkSubmitInfo SubmitInfo = aCommandList.build();
 		std::vector<VkSubmitInfo> Submission;
 		Submission.push_back(SubmitInfo);
-		return this->execute(aQFEO, Submission, aFence);
+		return this->execute(aDeviceOperation, Submission, aFence);
 	}
 
-	VkResult context::execute(device::operation aQFS, const std::vector<gcl::command_list>& aCommandList, VkFence aFence) {
+	VkResult context::execute(device::operation aDeviceOperation, const std::vector<gcl::command_list>& aCommandList, VkFence aFence) {
 		std::vector<VkSubmitInfo> SubmissionList = convert(aCommandList);
-		return this->execute(aQFS, SubmissionList, aFence);
+		return this->execute(aDeviceOperation, SubmissionList, aFence);
 	}
 
-	VkResult context::execute(device::operation aQFEO, const std::vector<VkSubmitInfo>& aSubmissionList, VkFence aFence) {
+	VkResult context::execute(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList, VkFence aFence) {
 		VkResult Result = VK_SUCCESS;
 		return this->execute(device::operation::PRESENT, aSubmissionList, std::vector<VkPresentInfoKHR>(0), aFence);
 	}
@@ -359,10 +374,51 @@ namespace geodesuka::core::gcl {
 		return this->execute(device::operation::PRESENT, std::vector<VkSubmitInfo>(0), aPresentationList, VK_NULL_HANDLE);
 	}
 
-	VkResult context::execute(device::operation aQFEO, const std::vector<VkSubmitInfo>& aSubmissionList, const std::vector<VkPresentInfoKHR>& aPresentationList, VkFence aFence) {
+	VkResult context::execute_and_wait(device::operation aDeviceOperation, VkCommandBuffer aCommandBuffer) {
+		VkSubmitInfo SubmitInfo{};
+		SubmitInfo.sType				= VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		SubmitInfo.pNext				= NULL;
+		SubmitInfo.waitSemaphoreCount	= 0;
+		SubmitInfo.pWaitSemaphores		= NULL;
+		SubmitInfo.pWaitDstStageMask	= NULL;
+		SubmitInfo.commandBufferCount	= 1;
+		SubmitInfo.pCommandBuffers		= &aCommandBuffer;
+		SubmitInfo.signalSemaphoreCount	= 0;
+		SubmitInfo.pSignalSemaphores	= NULL;
+		std::vector<VkSubmitInfo> Submission;
+		Submission.push_back(SubmitInfo);
+		return this->execute_and_wait(aDeviceOperation, Submission);
+	}
+
+	VkResult context::execute_and_wait(device::operation aDeviceOperation, const command_list& aCommandList) {
+		VkSubmitInfo SubmitInfo = aCommandList.build();
+		std::vector<VkSubmitInfo> Submission;
+		Submission.push_back(SubmitInfo);
+		return this->execute_and_wait(aDeviceOperation, Submission);
+	}
+
+	VkResult context::execute_and_wait(device::operation aDeviceOperation, const std::vector<gcl::command_list>& aCommandBatch) {
+		std::vector<VkSubmitInfo> SubmissionList = convert(aCommandBatch);
+		return this->execute_and_wait(aDeviceOperation, SubmissionList);
+	}
+
+	VkResult context::execute_and_wait(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList) {
+		return this->execute_and_wait(device::operation::PRESENT, aSubmissionList, std::vector<VkPresentInfoKHR>(0));
+	}
+
+	VkResult context::execute_and_wait(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList, const std::vector<VkPresentInfoKHR>& aPresentationList) {
+		VkResult Result = VK_SUCCESS;
+		VkFence Fence = this->create_fence();
+		Result = this->execute(aDeviceOperation, aSubmissionList, aPresentationList, Fence);
+		Result = this->wait(Fence);
+		this->destroy_fence(Fence);
+		return Result;
+	}
+
+	VkResult context::execute(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList, const std::vector<VkPresentInfoKHR>& aPresentationList, VkFence aFence) {
 		VkResult Result = VK_SUCCESS;
 
-		int i = this->qfi_to_i(aQFEO);
+		int i = this->qfi_to_i(aDeviceOperation);
 		int j = 0;
 
 		// Queue Operation Not supported.
@@ -370,7 +426,7 @@ namespace geodesuka::core::gcl {
 
 		while (true) {
 			if (Queue[i].Mutex[j].try_lock()) {
-				switch (aQFEO) {
+				switch (aDeviceOperation) {
 				case device::operation::TRANSFER:
 				case device::operation::COMPUTE:
 				case device::operation::GRAPHICS:
@@ -392,14 +448,6 @@ namespace geodesuka::core::gcl {
 			j = ((j == (Queue[i].count() - 1)) ? 0 : (j + 1));
 		}
 		return Result;
-	}
-
-	VkResult context::wait(VkFence aFence, VkBool32 aWaitOnAll) {
-		return vkWaitForFences(this->Handle, 1, &aFence, aWaitOnAll, UINT64_MAX);
-	}
-
-	VkResult context::wait(util::list<VkFence> aFenceList, VkBool32 aWaitOnAll) {
-		return vkWaitForFences(this->Handle, aFenceList.count(), aFenceList.Handle.data(), aWaitOnAll, UINT64_MAX);
 	}
 
 	bool context::available(device::operation aOperation) {

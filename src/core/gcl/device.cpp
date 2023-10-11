@@ -224,16 +224,18 @@ namespace geodesuka::core::gcl {
 		return temp;
 	}
 
+	// This function iterates through VkPhysicalDeviceMemoryProperties which is structure object containing
+	// a list of memory types and heaps available from the device, along with a parameter of aMemoryRequirements
+	// which is the memory requirements of the object in question. VkPhysicalDeviceMemoryProperties contains
+	// a list of memory types available, and a detailed list of memory heaps which can be allocated from.
+	// aMemoryRequirements contains a bit mask of valid memory types that can be used with the object in question.
+	// This function iterates through a list of available memory types and selects based on the requirements
+	// of aMemoryRequirements, and the chosen memory type. It will first search for an exact memory type,
+	// but if does not have exact memory types to suit the object, it will search for an approximate memory type
+	// which may have additional features. Will return -1 if no such memory type heap exists.
 	int device::get_memory_type_index(VkMemoryRequirements aMemoryRequirements, uint aMemoryType) const {
 		int MemoryTypeIndex = -1;
 		VkPhysicalDeviceMemoryProperties MemoryProperties = this->get_memory_properties();
-
-		for (uint32_t i = 0; i < MemoryProperties.memoryTypeCount; i++) {
-			size_t OptionCount = 0;
-			for (uint32_t j = 0; j < sizeof(uint32_t); j++) {
-				
-			}
-		}
 
 		// Search for exact memory type index.
 		for (uint32_t i = 0; i < MemoryProperties.memoryTypeCount; i++) {
@@ -242,7 +244,6 @@ namespace geodesuka::core::gcl {
 				break;
 			}
 		}
-
 
 		// Search for approximate memory type index.
 		if (MemoryTypeIndex == -1) {
@@ -254,7 +255,6 @@ namespace geodesuka::core::gcl {
 			}
 		}
 
-		// return -1 if no types exist.
 		return MemoryTypeIndex;
 	}
 

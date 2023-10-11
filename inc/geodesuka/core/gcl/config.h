@@ -5,6 +5,9 @@
 // Engine Wide Config File
 #include "../../config.h"
 
+// It approximately 16 MB
+#define GCL_TRANSFER_CHUNK_SIZE (1 << 24)
+
 // These values are determined by the Specification minimum.
 // https://registry.khronos.org/vulkan/specs/1.3-extensions/html/vkspec.html#limits-required
 #define GCL_VERTEX_BUFFER_BINDING_COUNT 16
