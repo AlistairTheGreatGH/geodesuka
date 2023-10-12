@@ -67,30 +67,23 @@ namespace geodesuka::core::gcl {
 		this->zero_out();
 
 		if (aInput.Context != nullptr) {
-			create_info RecreateInfo;
-			RecreateInfo.MemoryType		= aInput.Context->parent()->get_memory_type(aInput.AllocateInfo.memoryTypeIndex);
-			RecreateInfo.BufferUsage	= aInput.CreateInfo.usage;
-			Result = this->create(aInput.Context, RecreateInfo, aInput.CreateInfo.size);
-		}
+			Result = this->create(aInput.Context, this->MemoryType, this->Usage, aInput.Size);
 
-		if (Result == VK_SUCCESS) {
-			VkFence Fence = this->Context->create_fence();
-			command_list CommandBuffer = (*this << aInput);
+			command_list TransferCommandList = this->copy(aInput, 0, 0, aInput.Size);
 
-			Result = this->Context->execute(device::operation::TRANSFER, CommandBuffer, Fence);
-			Result = vkWaitForFences(this->Context->handle(), 1, &Fence, VK_TRUE, UINT64_MAX);
+			Result = this->Context->execute_and_wait(device::operation::TRANSFER, TransferCommandList);
 
-			this->Context->destroy_command_buffer(device::operation::TRANSFER, CommandBuffer);
-			this->Context->destroy_fence(Fence);
+			this->Context->destroy_command_list(device::operation::TRANSFER, TransferCommandList);
 		}
 	}
 
 	buffer::buffer(buffer&& aInput) noexcept {
-		this->Context		= aInput.Context;
-		this->CreateInfo	= aInput.CreateInfo;
-		this->Handle		= aInput.Handle;
-		this->AllocateInfo	= aInput.AllocateInfo;
-		this->MemoryHandle	= aInput.MemoryHandle;
+		this->Context			= aInput.Context;
+		this->Size 				= aInput.Size;
+		this->Usage 			= aInput.Usage;
+		this->Handle			= aInput.Handle;
+		this->MemoryType 		= aInput.MemoryType;
+		this->MemoryHandle		= aInput.MemoryHandle;
 		aInput.zero_out();
 	}
 
@@ -106,21 +99,14 @@ namespace geodesuka::core::gcl {
 		this->clear_device_memory();
 
 		if (aRhs.Context != nullptr) {
-			create_info RecreateInfo;
-			RecreateInfo.MemoryType		= aRhs.Context->parent()->get_memory_type(aRhs.AllocateInfo.memoryTypeIndex);
-			RecreateInfo.BufferUsage	= aRhs.CreateInfo.usage;
-			Result = this->create_device_memory(aRhs.Context, RecreateInfo, aRhs.CreateInfo.size);
-		}
+			// Create buffer object.
+			Result = this->create(aRhs.Context, aRhs.MemoryType, aRhs.Usage, aRhs.Size);
 
-		if (Result == VK_SUCCESS) {
-			VkFence Fence = this->Context->create_fence();
-			VkCommandBuffer CommandBuffer = (*this << aRhs);
+			command_list TransferCommandList = this->copy(aRhs, 0, 0, aRhs.Size);
 
-			Result = this->Context->execute(device::operation::TRANSFER, CommandBuffer, Fence);
-			Result = vkWaitForFences(this->Context->handle(), 1, &Fence, VK_TRUE, UINT64_MAX);
+			Result = this->Context->execute_and_wait(device::operation::TRANSFER, TransferCommandList);
 
-			this->Context->destroy_command_buffer(device::operation::TRANSFER, CommandBuffer);
-			this->Context->destroy_fence(Fence);
+			this->Context->destroy_command_list(device::operation::TRANSFER, TransferCommandList);
 		}
 
 		return *this;
@@ -128,9 +114,12 @@ namespace geodesuka::core::gcl {
 
 	buffer& buffer::operator=(buffer&& aRhs) noexcept {
 		this->clear_device_memory();
-		this->Context		= aRhs.Context;
-		this->Handle		= aRhs.Handle;
-		this->MemoryHandle	= aRhs.MemoryHandle;
+		this->Context			= aRhs.Context;
+		this->Size 				= aRhs.Size;
+		this->Usage 			= aRhs.Usage;
+		this->Handle			= aRhs.Handle;
+		this->MemoryType 		= aRhs.MemoryType;
+		this->MemoryHandle		= aRhs.MemoryHandle;
 		aRhs.zero_out();
 		return *this;
 	}

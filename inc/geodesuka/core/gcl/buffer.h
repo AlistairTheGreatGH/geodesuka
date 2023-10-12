@@ -89,7 +89,7 @@ namespace geodesuka::core::gcl {
 		uint 						MemoryType;
 		VkDeviceMemory				MemoryHandle;
 
-		VkResult create(context* aContext, uint aMemoryType, uint aBufferUsage, size_t aMemorySize, void* aBufferData);
+		VkResult create(context* aContext, uint aMemoryType, uint aBufferUsage, size_t aMemorySize, void* aBufferData = NULL);
 		VkBuffer create_handle(size_t aSize, uint aUsage);
 
 		void clear_device_memory();

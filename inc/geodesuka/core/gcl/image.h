@@ -331,74 +331,7 @@ namespace geodesuka::core::gcl {
 		image(const util::string& aFilePath);
 		image(const char* aFilePath);
 
-		image(type::id aTypeID, uint aResolution);
-		image(type::id aTypeID, math::vec2<uint> aResolution);
-		image(type::id aTypeID, math::vec3<uint> aResolution);
-		image(uint aArrayLayers, type::id aTypeID, uint aResolution);
-		image(uint aArrayLayers, type::id aTypeID, math::vec2<uint> aResolution);
-		image(uint aArrayLayers, type::id aTypeID, math::vec3<uint> aResolution);
-
-		image(type::id aTypeID, uint aResolution, void* aTextureData);
-		image(type::id aTypeID, math::vec2<uint> aResolution, void* aTextureData);
-		image(type::id aTypeID, math::vec3<uint> aResolution, void* aTextureData);
-		image(uint aArrayLayers, type::id aTypeID, uint aResolution, void* aTextureData);
-		image(uint aArrayLayers, type::id aTypeID, math::vec2<uint> aResolution, void* aTextureData);
-		image(uint aArrayLayers, type::id aTypeID, math::vec3<uint> aResolution, void* aTextureData);
-
-		image(format aFormat, uint aResolution);
-		image(format aFormat, math::vec2<uint> aResolution);
-		image(format aFormat, math::vec3<uint> aResolution);
-		image(uint aArrayLayers, format aFormat, uint aResolution);
-		image(uint aArrayLayers, format aFormat, math::vec2<uint> aResolution);
-		image(uint aArrayLayers, format aFormat, math::vec3<uint> aResolution);
-
-		image(format aFormat, uint aResolution, void* aTextureData);
-		image(format aFormat, math::vec2<uint> aResolution, void* aTextureData);
-		image(format aFormat, math::vec3<uint> aResolution, void* aTextureData);
-		image(uint aArrayLayers, format aFormat, uint aResolution, void* aTextureData);
-		image(uint aArrayLayers, format aFormat, math::vec2<uint> aResolution, void* aTextureData);
-		image(uint aArrayLayers, format aFormat, math::vec3<uint> aResolution, void* aTextureData);
-
-		// -------------------- Device Context Memory -------------------- //
-
-		// Load image and create device cont
-		image(context* aContext, create_info aCreateInfo, const util::string& aFilePath);
-		image(context* aContext, create_info aCreateInfo, const char* aFilePath);
-
-		// Make an image a device resource, usint a host image.
-		image(context* aContext, create_info aCreateInfo, const image* aHostImage);
-
-		// No Data Upload.
-		image(context* aContext, create_info aCreateInfo, type::id aTypeID, uint aResolution);
-		image(context* aContext, create_info aCreateInfo, type::id aTypeID, math::vec2<uint> aResolution);
-		image(context* aContext, create_info aCreateInfo, type::id aTypeID, math::vec3<uint> aResolution);
-		image(context* aContext, create_info aCreateInfo, uint aArrayLayers, type::id aTypeID, uint aResolution);
-		image(context* aContext, create_info aCreateInfo, uint aArrayLayers, type::id aTypeID, math::vec2<uint> aResolution);
-		image(context* aContext, create_info aCreateInfo, uint aArrayLayers, type::id aTypeID, math::vec3<uint> aResolution);
-
-		// Data Upload
-		image(context* aContext, create_info aCreateInfo, type::id aTypeID, uint aResolution, void* aTextureData);
-		image(context* aContext, create_info aCreateInfo, type::id aTypeID, math::vec2<uint> aResolution, void* aTextureData);
-		image(context* aContext, create_info aCreateInfo, type::id aTypeID, math::vec3<uint> aResolution, void* aTextureData);
-		image(context* aContext, create_info aCreateInfo, uint aArrayLayers, type::id aTypeID, uint aResolution, void* aTextureData);
-		image(context* aContext, create_info aCreateInfo, uint aArrayLayers, type::id aTypeID, math::vec2<uint> aResolution, void* aTextureData);
-		image(context* aContext, create_info aCreateInfo, uint aArrayLayers, type::id aTypeID, math::vec3<uint> aResolution, void* aTextureData);
-
-		// No Data Upload.
-		image(context* aContext, create_info aCreateInfo, format aFormat, uint aResolution);
-		image(context* aContext, create_info aCreateInfo, format aFormat, math::vec2<uint> aResolution);
-		image(context* aContext, create_info aCreateInfo, format aFormat, math::vec3<uint> aResolution);
-		image(context* aContext, create_info aCreateInfo, uint aArrayLayers, format aFormat, uint aResolution);
-		image(context* aContext, create_info aCreateInfo, uint aArrayLayers, format aFormat, math::vec2<uint> aResolution);
-		image(context* aContext, create_info aCreateInfo, uint aArrayLayers, format aFormat, math::vec3<uint> aResolution);
-
-		// Data Upload
-		image(context* aContext, create_info aCreateInfo, format aFormat, uint aResolution, void* aTextureData);
-		image(context* aContext, create_info aCreateInfo, format aFormat, math::vec2<uint> aResolution, void* aTextureData);
-		image(context* aContext, create_info aCreateInfo, format aFormat, math::vec3<uint> aResolution, void* aTextureData);
-		image(context* aContext, create_info aCreateInfo, uint aArrayLayers, format aFormat, uint aResolution, void* aTextureData);
-		image(context* aContext, create_info aCreateInfo, uint aArrayLayers, format aFormat, math::vec2<uint> aResolution, void* aTextureData);
-		image(context* aContext, create_info aCreateInfo, uint aArrayLayers, format aFormat, math::vec3<uint> aResolution, void* aTextureData);
+		image(context* aContext, create_info aCreateInfo, format aFormat, uint aX, uint aY, uint aZ, uint aT, void* aTextureData);
 
 		// Copy Constructor.
 		image(image& aInput);
@@ -411,34 +344,35 @@ namespace geodesuka::core::gcl {
 		image& operator=(image& aRhs);
 		// Move Assignment.
 		image& operator=(image&& aRhs) noexcept;
-		// TRANSFER
-		VkCommandBuffer operator<<(image& aRhs);
-		// TRANSFER
-		VkCommandBuffer operator>>(image& aRhs);
-		// TRANSFER
-		VkCommandBuffer operator<<(buffer& aRhs);
-		// TRANSFER
-		VkCommandBuffer operator>>(buffer& aRhs);
-		// GRAPHICS
-		VkCommandBuffer generate_mipmaps(VkFilter aFilter);
 
-		// Transistions all mip levels and array layers into the desired image layout.
-		// Queue Support: T, G, C, D, E.
-		void cmd_transition(VkCommandBuffer aCommandBuffer,
+		// Device Operation Support: T.
+		command_list copy(buffer& aSourceData, VkBufferImageCopy aRegion);
+		command_list copy(buffer& aSourceData, std::vector<VkBufferImageCopy> aRegionList);
+		command_list copy(image& aSourceData, VkImageCopy aRegion);
+		command_list copy(image& aSourceData, std::vector<VkImageCopy> aRegionList);
+
+		// Device Operation Support: T, G, C, D, E.
+		command_list transition(
 			VkAccessFlags aSrcAccessMask, VkAccessFlags aDstAccessMask,
 			VkPipelineStageFlags aSrcStage, VkPipelineStageFlags aDstStage,
 			VkImageLayout aNewLayout
 		);
-
-		// Transistions selected mip levels and array layers into the desired image layout.
-		// Queue Support: T, G, C, D, E.
-		void cmd_transition(VkCommandBuffer aCommandBuffer,
+		command_list transition(
 			VkAccessFlags aSrcAccessMask, VkAccessFlags aDstAccessMask,
 			VkPipelineStageFlags aSrcStage, VkPipelineStageFlags aDstStage,
 			uint32_t aMipLevel, uint32_t aMipLevelCount,
 			uint32_t aArrayLayer, uint32_t aArrayLayerCount,
 			VkImageLayout aNewLayout
 		);
+
+		// Device Operation Support: G.
+		command_list generate_mipmaps(VkFilter aFilter);
+
+		VkResult write(void* aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
+		VkResult write(void* aSourceData, std::vector<VkBufferImageCopy> aRegionList);
+
+		VkResult read(void* aDestinationData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
+		VkResult read(void* aDestinationData, std::vector<VkBufferImageCopy> aRegionList);
 
 		VkAttachmentDescription description(VkAttachmentLoadOp aLoadOp, VkAttachmentStoreOp aStoreOp);
 		VkAttachmentDescription description(VkAttachmentLoadOp aLoadOp, VkAttachmentStoreOp aStoreOp, VkImageLayout aFinalLayout);
@@ -474,19 +408,16 @@ namespace geodesuka::core::gcl {
 		// static bool initialize();
 		// static void terminate();
 
-		// Host Memory
-		//size_t						Size;
-		//void*						Data;
-		uint				Layers;
-		int							Format;
-		math::vec3<uint>					Resolution;
+		uint					Layers;
+		int						Format;
+		math::vec3<uint>		Resolution;
 
 		// Device Memory
-		context*					Context;
-		size_t						DeviceSize;
+		context*				Context;
+		size_t					DeviceSize;
 		VkImageCreateInfo		CreateInfo;
 		VkImage					Handle;
-		VkMemoryAllocateInfo		AllocateInfo;
+		VkMemoryAllocateInfo	AllocateInfo;
 		VkDeviceMemory			MemoryHandle;
 		VkImageLayout**			Layout; 
 		VkExtent3D*				MipExtent;
