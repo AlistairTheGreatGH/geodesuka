@@ -328,10 +328,8 @@ namespace geodesuka::core::gcl {
 
 		// Host memory images.
 		image();
-		image(const util::string& aFilePath);
-		image(const char* aFilePath);
 
-		image(context* aContext, create_info aCreateInfo, format aFormat, uint aX, uint aY, uint aZ, uint aT, void* aTextureData);
+		image(context* aContext, create_info aCreateInfo, uint aMipLevel, format aFormat, uint aX, uint aY, uint aZ, uint aT, void* aTextureData);
 
 		// Copy Constructor.
 		image(image& aInput);
@@ -417,36 +415,17 @@ namespace geodesuka::core::gcl {
 		size_t					DeviceSize;
 		VkImageCreateInfo		CreateInfo;
 		VkImage					Handle;
+
+
 		VkMemoryAllocateInfo	AllocateInfo;
 		VkDeviceMemory			MemoryHandle;
 		VkImageLayout**			Layout; 
 		VkExtent3D*				MipExtent;
 
-		bool load_host_image(const char* aFilePath);
-
-		bool create_host_image(uint32_t aArrayLayers, int aFormat, uint32_t aWidth, uint32_t aHeight, uint32_t aDepth, void* aTextureData);
-
-		void clear_host_memory();
-
-		// Calculates number of possible mip levels.
-		uint32_t mip_level_count(VkImageType aImageType, VkExtent3D aExtent);
-
-		// Creates Device Image.
-		VkResult create_device_image(context* aContext, create_info aCreateInfo, uint aArrayLayers, int aFormat, math::vec3<uint> aResolution);
-		VkResult create_device_image(context* aDeviceContext, VkImageCreateInfo aCreateInfo, int aMemoryType);
-		VkResult get_limits(VkImageFormatProperties * aReturn, device* aDevice, create_info aCreateInfo, int aFormat, math::vec3<uint> aResolution);
-		VkImageCreateInfo pack_create_info(VkImageFormatProperties aImageLimits, create_info aCreateInfo, uint aArrayLayers, int aFormat, math::vec3<uint> aResolution);
-		VkMemoryAllocateInfo pack_allocate_info(context* aContext, device* aDevice, int aMemoryType);
-		VkResult generate_miplevels(uint aMipLevel, uint aArrayLayers, VkImageLayout aInitialLayout, VkImageType aImageType, VkExtent3D aExtent);
-
-		// Destroys device memory image.
-		void clear_device_memory();
-
-		// Clears garbage memory.
-		void zero_out();
-
-		// Used by system_window
-		VkImageView create_system_window_frame(context* aContext, VkFormat aFormat, VkImageUsageFlags aUsageFlags, VkImage aImageHandle, math::vec3<uint> aImageResolution);
+		context*										Context;
+		math::vec4<uint> 								Resolution;
+		std::vector<std::vector<VkImageLayout>> 		Layout;
+		std::vector<VkExtent3D> 						Extent;
 
 	};
 
