@@ -17,7 +17,7 @@ namespace geodesuka::core::io {
 
         math::vec4<uint> Resolution;
 
-    }
+    };
 
 }
 

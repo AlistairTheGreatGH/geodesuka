@@ -329,7 +329,7 @@ namespace geodesuka::core::gcl {
 		// Host memory images.
 		image();
 
-		image(context* aContext, create_info aCreateInfo, uint aMipLevel, format aFormat, uint aX, uint aY, uint aZ, uint aT, void* aTextureData);
+		image(context* aContext, create_info aCreateInfo, format aFormat, uint aX, uint aY, uint aZ, uint aT, void* aTextureData);
 
 		// Copy Constructor.
 		image(image& aInput);
@@ -349,7 +349,7 @@ namespace geodesuka::core::gcl {
 		command_list copy(image& aSourceData, VkImageCopy aRegion);
 		command_list copy(image& aSourceData, std::vector<VkImageCopy> aRegionList);
 
-		// Device Operation Support: T, G, C, D, E.
+		// Device Operation: T, G, C, D, E.
 		command_list transition(
 			VkAccessFlags aSrcAccessMask, VkAccessFlags aDstAccessMask,
 			VkPipelineStageFlags aSrcStage, VkPipelineStageFlags aDstStage,
@@ -363,7 +363,7 @@ namespace geodesuka::core::gcl {
 			VkImageLayout aNewLayout
 		);
 
-		// Device Operation Support: G.
+		// Device Operation: GRAPHICS.
 		command_list generate_mipmaps(VkFilter aFilter);
 
 		VkResult write(void* aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
@@ -403,29 +403,21 @@ namespace geodesuka::core::gcl {
 
 	private:
 
-		// static bool initialize();
-		// static void terminate();
-
-		uint					Layers;
-		int						Format;
-		math::vec3<uint>		Resolution;
-
-		// Device Memory
-		context*				Context;
-		size_t					DeviceSize;
-		VkImageCreateInfo		CreateInfo;
-		VkImage					Handle;
-
-
-		VkMemoryAllocateInfo	AllocateInfo;
-		VkDeviceMemory			MemoryHandle;
-		VkImageLayout**			Layout; 
-		VkExtent3D*				MipExtent;
-
+		// Image Handle Info
 		context*										Context;
-		math::vec4<uint> 								Resolution;
-		std::vector<std::vector<VkImageLayout>> 		Layout;
-		std::vector<VkExtent3D> 						Extent;
+		VkImageCreateInfo 								CreateInfo;
+		VkImage											Handle;
+
+		// Memory Handle Info
+		uint 											MemoryType;
+		VkDeviceMemory 									MemoryHandle;
+
+		// Generated Mipmap levels
+		std::vector<VkExtent3D> 						Extent;	// [MipLevel]
+		std::vector<std::vector<VkImageLayout>> 		Layout; // [MipLevel][ArrayLayer]
+
+		void zero_out();
+		void clear();
 
 	};
 

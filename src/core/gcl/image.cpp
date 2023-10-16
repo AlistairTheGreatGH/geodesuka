@@ -564,8 +564,199 @@ namespace geodesuka::core::gcl {
 		
 	}
 
-	image::image(context* aContext, create_info aCreateInfo, uint aMipLevel, format aFormat, uint aX, uint aY, uint aZ, uint aT, void* aTextureData) {
+	image::image(context* aContext, create_info aCreateInfo, format aFormat, uint aX, uint aY, uint aZ, uint aT, void* aTextureData) {
+		VkResult Result = VK_SUCCESS;
 
+		this->zero_out();
+
+		// Image Handle Info
+		this->Context					= aContext;
+		this->Handle 					= VK_NULL_HANDLE;
+
+		this->MemoryType 				= aCreateInfo.Memory;
+		this->MemoryHandle 				= VK_NULL_HANDLE;
+
+		VkImageCreateInfo CreateInfo {};
+		this->CreateInfo.sType						= VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		this->CreateInfo.pNext						= NULL;
+		this->CreateInfo.flags						= 0;
+		if ((aY == 1) && (aZ == 1)) {
+			// 1D Image
+			this->CreateInfo.imageType 					= VK_IMAGE_TYPE_1D;
+		} else if (aZ == 1) {
+			// 2D Image
+			this->CreateInfo.imageType 					= VK_IMAGE_TYPE_2D;
+		} else {
+			// 3D Image
+			this->CreateInfo.imageType 					= VK_IMAGE_TYPE_3D;
+		}
+		this->CreateInfo.format						= (VkFormat)aFormat;
+		this->CreateInfo.extent						= { aX, aY, aZ };
+		this->CreateInfo.mipLevels					= std::floor(std::log2(std::max(std::max(aX, aY), aZ))) + 1;
+		this->CreateInfo.arrayLayers				= aT;
+		this->CreateInfo.samples					= (VkSampleCountFlagBits)aCreateInfo.Sample;
+		this->CreateInfo.tiling						= (VkImageTiling)aCreateInfo.Tiling;
+		this->CreateInfo.usage						= (VkImageUsageFlags)aCreateInfo.Usage;
+		this->CreateInfo.sharingMode				= VK_SHARING_MODE_EXCLUSIVE;
+		this->CreateInfo.queueFamilyIndexCount		= 0;
+		this->CreateInfo.pQueueFamilyIndices		= NULL;
+		this->CreateInfo.initialLayout				= VK_IMAGE_LAYOUT_UNDEFINED;
+
+		Result = vkCreateImage(aContext->handle(), &CreateInfo, NULL, &this->Handle);
+		if (Result != VK_SUCCESS) {
+			// TODO: Error handling
+			throw std::runtime_error("Failed to create image.");
+		}
+
+		// Get memory requirements of the image object.
+		VkMemoryRequirements MemoryRequirements = this->Context->get_image_memory_requirements(this->Handle);
+
+		// Find the memory index for the heap that best suits the memory requirements, and desired memory properties.
+		this->MemoryHandle = this->Context->allocate_memory(MemoryRequirements, this->MemoryType);
+
+		// Bind the image object to the memory object.
+		Result = vkBindImageMemory(this->Context->handle(), this->Handle, this->MemoryHandle, 0);
+
+		// Generate Mipmaps
+
+	}
+
+	// Copy Constructor.
+	image::image(image& aInput) : 
+	image(
+		aInput.Context, 
+		create_info(aInput.CreateInfo.samples, aInput.CreateInfo.tiling, this->MemoryType, aInput.CreateInfo.usage), 
+		(format)aInput.CreateInfo.format, 
+		aInput.CreateInfo.extent.width, aInput.CreateInfo.extent.height, aInput.CreateInfo.extent.depth, aInput.CreateInfo.arrayLayers, 
+		NULL
+	) {
+		std::vector<VkImageCopy> RegionList;
+		for (uint32_t i = 0; i < aInput.CreateInfo.mipLevels; i++) {
+			VkImageCopy Region;
+			Region.srcSubresource.aspectMask				= VK_IMAGE_ASPECT_COLOR_BIT;
+			Region.srcSubresource.mipLevel					= i;
+			Region.srcSubresource.baseArrayLayer			= 0;
+			Region.srcSubresource.layerCount				= aInput.CreateInfo.arrayLayers;
+			Region.srcOffset								= { 0, 0, 0 };
+			Region.srcSubresource.aspectMask				= VK_IMAGE_ASPECT_COLOR_BIT;
+			Region.srcSubresource.mipLevel					= i;
+			Region.srcSubresource.baseArrayLayer			= 0;
+			Region.srcSubresource.layerCount				= aInput.CreateInfo.arrayLayers;
+			Region.dstOffset								= { 0, 0, 0 };
+			Region.extent									= { aInput.CreateInfo.extent.width, aInput.CreateInfo.extent.height, aInput.CreateInfo.extent.depth };
+			RegionList.push_back(Region);
+		}
+
+		// Copy the image.
+		command_list CommandList = this->copy(aInput, RegionList);
+
+		// Execute transfer operations.
+		this->Context->execute_and_wait(device::operation::TRANSFER, CommandList);
+
+	}
+
+	// Move Constructor.
+	image::image(image&& aInput) noexcept {
+		this->Context = aInput.Context;
+		this->CreateInfo = aInput.CreateInfo;
+		this->Handle = aInput.Handle;
+
+		this->MemoryType = aInput.MemoryType;
+		this->MemoryHandle = aInput.MemoryHandle;
+
+		this->Extent = aInput.Extent;
+		this->Layout = aInput.Layout;
+	}
+
+	// Destructor
+	image::~image() {
+		this->clear();
+	}
+
+	// Copy Assignment.
+	image& image::operator=(image& aRhs) {
+
+	}
+
+	// Move Assignment.
+	image& image::operator=(image&& aRhs) noexcept {
+		this->clear();
+	}
+
+	// Device Operation Support: T.
+	command_list image::copy(buffer& aSourceData, VkBufferImageCopy aRegion) {
+		std::vector<VkBufferImageCopy> RegionList = { aRegion };
+		return this->copy(aSourceData, RegionList);
+	}
+
+	command_list image::copy(buffer& aSourceData, std::vector<VkBufferImageCopy> aRegionList) {
+		VkResult Result = VK_SUCCESS;
+		command_list CommandList = this->Context->create_command_list(device::operation::TRANSFER, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
+		VkCommandBufferBeginInfo BeginInfo {};
+		BeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		BeginInfo.pNext = NULL;
+		BeginInfo.flags = 0;
+		BeginInfo.pInheritanceInfo = NULL;
+		Result = vkBeginCommandBuffer(CommandList[0], &BeginInfo);
+		vkCmdCopyBufferToImage(CommandList[0], aSourceData.handle(), this->Handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, aRegionList.size(), aRegionList.data());
+		Result = vkEndCommandBuffer(CommandList[0]);		
+		return CommandList;
+	}
+
+	command_list image::copy(image& aSourceData, VkImageCopy aRegion) {
+		std::vector<VkImageCopy> RegionList = { aRegion };
+		return this->copy(aSourceData, RegionList);
+	}
+
+	command_list image::copy(image& aSourceData, std::vector<VkImageCopy> aRegionList) {
+		VkResult Result = VK_SUCCESS;
+		command_list CommandList = this->Context->create_command_list(device::operation::TRANSFER, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
+		VkCommandBufferBeginInfo BeginInfo {};
+		BeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		BeginInfo.pNext = NULL;
+		BeginInfo.flags = 0;
+		BeginInfo.pInheritanceInfo = NULL;
+		Result = vkBeginCommandBuffer(CommandList[0], &BeginInfo);
+		vkCmdCopyImage(CommandList[0], aSourceData.handle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, this->Handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, aRegionList.size(), aRegionList.data());
+		Result = vkEndCommandBuffer(CommandList[0]);		
+		return CommandList;
+	}
+
+	// Device Operation: T, G, C, D, E.
+	command_list image::transition(
+		VkAccessFlags aSrcAccessMask, VkAccessFlags aDstAccessMask,
+		VkPipelineStageFlags aSrcStage, VkPipelineStageFlags aDstStage,
+		VkImageLayout aNewLayout
+	) {
+
+	}
+
+	command_list image::transition(
+		VkAccessFlags aSrcAccessMask, VkAccessFlags aDstAccessMask,
+		VkPipelineStageFlags aSrcStage, VkPipelineStageFlags aDstStage,
+		uint32_t aMipLevel, uint32_t aMipLevelCount,
+		uint32_t aArrayLayer, uint32_t aArrayLayerCount,
+		VkImageLayout aNewLayout
+	) {
+
+		VkImageMemoryBarrier Barrier {};
+		//vkCmdPipelineBarrier()
+	}
+
+	void image::zero_out() {
+		this->Context			= nullptr;
+		this->CreateInfo		= {};
+		this->Handle			= VK_NULL_HANDLE;
+		this->MemoryType		= 0;
+		this->MemoryHandle		= VK_NULL_HANDLE;
+		this->Extent.clear();
+		this->Layout.clear();
+	}
+
+	void image::clear() {
+		this->Context->free_memory(this->MemoryHandle);
+		vkDestroyImage(this->Context->handle(), this->Handle, NULL);
+		this->zero_out();
 	}
 
 }

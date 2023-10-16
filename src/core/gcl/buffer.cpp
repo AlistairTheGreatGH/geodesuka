@@ -285,6 +285,7 @@ namespace geodesuka::core::gcl {
 		// Allocate memory for buffer.
 		this->MemoryHandle = this->Context->allocate_memory(MemoryRequirements, aMemoryType);
 
+		// Bind Buffer to allocated Memory.
 		Result = vkBindBufferMemory(this->Context->handle(), this->Handle, this->MemoryHandle, 0);
 
 		this->write(aBufferData, 0, 0, aMemorySize);
