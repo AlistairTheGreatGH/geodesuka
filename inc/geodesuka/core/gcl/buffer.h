@@ -63,14 +63,17 @@ namespace geodesuka::core::gcl {
 		buffer& operator=(buffer& aRhs);
 		buffer& operator=(buffer&& aRhs) noexcept;
 
+		// Generates a transfer command which data between other buffers/images.
 		command_list copy(buffer& aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
 		command_list copy(buffer& aSourceData, std::vector<VkBufferCopy> aRegionList);
 		command_list copy(image& aSourceData, VkImageLayout aImageLayout, VkBufferImageCopy aRegion);
 		command_list copy(image& aSourceData, VkImageLayout aImageLayout, std::vector<VkBufferImageCopy> aRegionList);
 
+		// Write to buffer from host memory data.
 		VkResult write(void* aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
 		VkResult write(void* aSourceData, std::vector<VkBufferCopy> aRegionList);
 
+		// Read from buffer data into host memory.
 		VkResult read(void* aDestinationData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
 		VkResult read(void* aDestinationData, std::vector<VkBufferCopy> aRegionList);
 

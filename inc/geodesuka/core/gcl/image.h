@@ -366,9 +366,11 @@ namespace geodesuka::core::gcl {
 		// Device Operation: GRAPHICS.
 		command_list generate_mipmaps(VkFilter aFilter);
 
+		// Write to image data memory from host memory.
 		VkResult write(void* aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
 		VkResult write(void* aSourceData, std::vector<VkBufferImageCopy> aRegionList);
 
+		// Read from image data memory to host memory.
 		VkResult read(void* aDestinationData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
 		VkResult read(void* aDestinationData, std::vector<VkBufferImageCopy> aRegionList);
 

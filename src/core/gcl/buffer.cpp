@@ -311,7 +311,6 @@ namespace geodesuka::core::gcl {
 
 			}
 
-
 		}
 	}
 
