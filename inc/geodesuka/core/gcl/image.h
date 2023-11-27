@@ -343,35 +343,41 @@ namespace geodesuka::core::gcl {
 		// Move Assignment.
 		image& operator=(image&& aRhs) noexcept;
 
-		// Device Operation Support: T.
+		// Device Operation Support: TRANSFER.
 		command_list copy(buffer& aSourceData, VkBufferImageCopy aRegion);
 		command_list copy(buffer& aSourceData, std::vector<VkBufferImageCopy> aRegionList);
 		command_list copy(image& aSourceData, VkImageCopy aRegion);
 		command_list copy(image& aSourceData, std::vector<VkImageCopy> aRegionList);
 
-		// Device Operation: T, G, C, D, E.
+		// Device Operation: T.
 		command_list transition(
+			//device::operation aDeviceOperation,
 			VkAccessFlags aSrcAccessMask, VkAccessFlags aDstAccessMask,
 			VkPipelineStageFlags aSrcStage, VkPipelineStageFlags aDstStage,
-			VkImageLayout aNewLayout
-		);
-		command_list transition(
-			VkAccessFlags aSrcAccessMask, VkAccessFlags aDstAccessMask,
-			VkPipelineStageFlags aSrcStage, VkPipelineStageFlags aDstStage,
-			uint32_t aMipLevel, uint32_t aMipLevelCount,
-			uint32_t aArrayLayer, uint32_t aArrayLayerCount,
-			VkImageLayout aNewLayout
+			VkImageLayout aNewLayout,
+			uint32_t aMipLevel = 0, uint32_t aMipLevelCount = UINT32_MAX,
+			uint32_t aArrayLayerStart = 0, uint32_t aArrayLayerCount = UINT32_MAX
 		);
 
 		// Device Operation: GRAPHICS.
 		command_list generate_mipmaps(VkFilter aFilter);
 
 		// Write to image data memory from host memory.
-		VkResult write(void* aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
+		VkResult write(
+			void* aSourceData, size_t aSourceOffset, 											// Source data and offset.
+			uint32_t aDestinationMipLevel,														// Selected Mip Level
+			VkOffset3D aDestinationOffset, VkExtent3D aDestinationExtent, 						// Destination offsets, Data Size = aExtent.width * aExtent.height * aExtent.depth * sizeof(format)
+			uint32_t aDestinationArrayLayer = 0, uint32_t aDestinationArrayLayerCount = 1 		// Array Layers which are optional
+		);
 		VkResult write(void* aSourceData, std::vector<VkBufferImageCopy> aRegionList);
 
 		// Read from image data memory to host memory.
-		VkResult read(void* aDestinationData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
+		VkResult read(
+			void* aDestinationData, size_t aDestinationOffset, 									// Source data and offset.
+			uint32_t aSourceMipLevel,															// Selected Mip Level
+			VkOffset3D aSourceOffset, VkExtent3D aSourceExtent, 								// Destination offsets, Data Size = aExtent.width * aExtent.height * aExtent.depth * sizeof(format)
+			uint32_t aSourceArrayLayer = 0, uint32_t aSourceArrayLayerCount = 1 				// Array Layers which are optional
+		);
 		VkResult read(void* aDestinationData, std::vector<VkBufferImageCopy> aRegionList);
 
 		VkAttachmentDescription description(VkAttachmentLoadOp aLoadOp, VkAttachmentStoreOp aStoreOp);
@@ -389,12 +395,6 @@ namespace geodesuka::core::gcl {
 		VkImageView view();
 		//VkImageView view(vk_image_viewType aType, VkImageSubresourceRange aRange);
 		//VkImageView view(vk_image_viewType aType, VkComponentMapping aComponentMapping, VkImageSubresourceRange aRange);
-		
-		// Write to an image.
-		VkResult write(size_t aMemorySize, void* aData);
-
-		// Read to an image.
-		VkResult read(size_t aMemorySize, void* aData);
 
 		// Total memory size of the image. (Does not include mip levels)
 		size_t get_memory_size() const;

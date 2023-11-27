@@ -12,6 +12,7 @@
 #include <assert.h>
 
 #include <vector>
+#include <algorithm>
 
 #include <geodesuka/core/math.h>
 
@@ -576,7 +577,6 @@ namespace geodesuka::core::gcl {
 		this->MemoryType 				= aCreateInfo.Memory;
 		this->MemoryHandle 				= VK_NULL_HANDLE;
 
-		VkImageCreateInfo CreateInfo {};
 		this->CreateInfo.sType						= VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		this->CreateInfo.pNext						= NULL;
 		this->CreateInfo.flags						= 0;
@@ -602,6 +602,17 @@ namespace geodesuka::core::gcl {
 		this->CreateInfo.pQueueFamilyIndices		= NULL;
 		this->CreateInfo.initialLayout				= VK_IMAGE_LAYOUT_UNDEFINED;
 
+		// Memory of Layouts and Extents
+		for (uint32_t i = 0; i < this->CreateInfo.mipLevels; i++) {
+			this->Extent[i] = { aX, aY, aZ };
+		}
+
+		for (uint32_t i = 0; i < this->CreateInfo.mipLevels; i++) {
+			for (uint32_t j = 0; this->CreateInfo.arrayLayers; j++) {
+				this->Layout[i][j] = VK_IMAGE_LAYOUT_UNDEFINED;
+			}
+		}
+
 		Result = vkCreateImage(aContext->handle(), &CreateInfo, NULL, &this->Handle);
 		if (Result != VK_SUCCESS) {
 			// TODO: Error handling
@@ -618,7 +629,10 @@ namespace geodesuka::core::gcl {
 		Result = vkBindImageMemory(this->Context->handle(), this->Handle, this->MemoryHandle, 0);
 
 		// Generate Mipmaps
-
+		command_list GenerateMipMaps = this->generate_mipmaps(VkFilter::VK_FILTER_LINEAR);
+		this->Context->execute_and_wait(device::operation::GRAPHICS, GenerateMipMaps);
+		this->Context->destroy_command_list(device::operation::GRAPHICS, GenerateMipMaps);
+		
 	}
 
 	// Copy Constructor.
@@ -722,25 +736,140 @@ namespace geodesuka::core::gcl {
 		return CommandList;
 	}
 
-	// Device Operation: T, G, C, D, E.
 	command_list image::transition(
-		VkAccessFlags aSrcAccessMask, VkAccessFlags aDstAccessMask,
-		VkPipelineStageFlags aSrcStage, VkPipelineStageFlags aDstStage,
-		VkImageLayout aNewLayout
+			//device::operation aDeviceOperation,
+			VkAccessFlags aSrcAccessMask, VkAccessFlags aDstAccessMask,
+			VkPipelineStageFlags aSrcStage, VkPipelineStageFlags aDstStage,
+			VkImageLayout aNewLayout,
+			uint32_t aMipLevel, uint32_t aMipLevelCount,
+			uint32_t aArrayLayerStart, uint32_t aArrayLayerCount
+	) {
+		VkResult Result = VK_SUCCESS;
+
+		VkImageMemoryBarrier Barrier {};
+		Barrier.sType									= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		Barrier.pNext									= NULL;
+		Barrier.srcAccessMask							= aSrcAccessMask;
+		Barrier.dstAccessMask							= aDstAccessMask;
+		Barrier.oldLayout								= this->CreateInfo.initialLayout;
+		Barrier.newLayout								= aNewLayout;
+		Barrier.srcQueueFamilyIndex						= 0;
+		Barrier.dstQueueFamilyIndex						= 0;
+		Barrier.image									= this->Handle;
+		Barrier.subresourceRange.aspectMask				= this->aspect_flag(this->CreateInfo.format);
+		Barrier.subresourceRange.baseMipLevel			= aMipLevel;
+		Barrier.subresourceRange.levelCount 			= std::min(aMipLevelCount, this->CreateInfo.mipLevels - aMipLevel);
+		Barrier.subresourceRange.baseArrayLayer			= aArrayLayerStart;
+		Barrier.subresourceRange.layerCount				= std::min(aArrayLayerCount, this->CreateInfo.arrayLayers - aArrayLayerStart);
+
+		command_list CommandList = this->Context->create_command_list(device::operation::TRANSFER, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
+		VkCommandBufferBeginInfo BeginInfo {
+			VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			NULL,
+			0,
+			NULL
+		};
+
+		Result = vkBeginCommandBuffer(CommandList[0], &BeginInfo);
+		vkCmdPipelineBarrier(
+			CommandList[0],
+			aSrcStage, aDstStage, 0,
+			0, NULL,
+			0, NULL,
+			1, &Barrier
+		);
+		Result = vkEndCommandBuffer(CommandList[0]);
+
+		return CommandList;
+	}
+
+	// Write to image data memory from host memory.
+	VkResult image::write(
+		void* aSourceData, size_t aSourceOffset, 									// Source data and offset.
+		uint32_t aDestinationMipLevel,												// Selected Mip Level
+		VkOffset3D aDestinationOffset, VkExtent3D aDestinationExtent, 				// Destination offsets, Data Size = aExtent.width * aExtent.height * aExtent.depth * sizeof(format)
+		uint32_t aDestinationArrayLayer, uint32_t aDestinationArrayLayerCount 		// Array Layers which are optional
+	) {
+		VkBufferImageCopy Region{};
+		Region.bufferOffset 						= aSourceOffset;
+		Region.bufferRowLength 						= 0;
+		Region.bufferImageHeight 					= 0;
+		Region.imageSubresource.aspectMask 			= this->aspect_flag(this->CreateInfo.format);
+		Region.imageSubresource.mipLevel 			= aDestinationMipLevel;
+		Region.imageSubresource.baseArrayLayer 		= aDestinationArrayLayer;
+		Region.imageSubresource.layerCount 			= aDestinationArrayLayerCount;
+		Region.imageOffset 							= aDestinationOffset;
+		Region.imageExtent 							= aDestinationExtent;
+		std::vector<VkBufferImageCopy> RegionList = { Region };
+		return this->write(aSourceData, RegionList);
+	}
+
+	VkResult image::write(void* aSourceData, std::vector<VkBufferImageCopy> aRegionList) {
+		VkResult Result = VK_SUCCESS;
+		// Note: I cannot think of a good chunk loading method for images, so instead I will
+		// just use a device local staging buffer.
+
+		// Find the largest region size of the list, and that will be the size of the staging
+		// buffer. This is to reduce redundant allocation of memory.
+		size_t StagingBufferSize = 0;
+		for (VkBufferImageCopy Region : aRegionList) {
+			size_t RegionSize = Region.imageExtent.width * Region.imageExtent.height * Region.imageExtent.depth * Region.imageSubresource.layerCount * bytesperpixel(this->CreateInfo.format);
+			if (StagingBufferSize < RegionSize) {
+				StagingBufferSize = RegionSize;
+			}
+		}
+
+		// For textures, considering they will be smaller than 3d models, we will use a staging buffer
+		// directly on the device for transfer operations. If image regions are larger than 16mb, then
+		// it will be chunk uploaded to GPU.
+		buffer StagingBuffer(
+			Context,
+			device::memory::DEVICE_LOCAL,
+			buffer::TRANSFER_SRC,
+			StagingBufferSize
+		);
+
+		// Iterate over each region to transfer data to device memory.
+		for (VkBufferImageCopy Region : aRegionList) {
+			
+			// Calculate Region Size
+			size_t RegionSize = Region.imageExtent.width * Region.imageExtent.height * Region.imageExtent.depth * Region.imageSubresource.layerCount * bytesperpixel(this->CreateInfo.format);
+			
+			// Write data to device buffer.
+			StagingBuffer.write(aSourceData, Region.bufferOffset, 0, RegionSize);
+
+			command_list CommandList;
+
+			CommandList |= this->transition(
+				VK_ACCESS_MEMORY_WRITE_BIT, 					VK_ACCESS_MEMORY_READ_BIT,
+				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+
+			);
+
+			command_list CommandList = this->copy(StagingBuffer, Region);
+
+			this->Context->execute_and_wait(device::operation::TRANSFER, CommandList);
+
+			this->Context->destroy_command_list(device::operation::TRANSFER, CommandList);
+
+
+
+		}
+
+	}
+
+		// Read from image data memory to host memory.
+	VkResult image::read(
+			void* aDestinationData, size_t aDestinationOffset, 									// Source data and offset.
+			uint32_t aSourceMipLevel,															// Selected Mip Level
+			VkOffset3D aSourceOffset, VkExtent3D aSourceExtent, 								// Destination offsets, Data Size = aExtent.width * aExtent.height * aExtent.depth * sizeof(format)
+			uint32_t aSourceArrayLayer = 0, uint32_t aSourceArrayLayerCount = 1 				// Array Layers which are optional
 	) {
 
 	}
 
-	command_list image::transition(
-		VkAccessFlags aSrcAccessMask, VkAccessFlags aDstAccessMask,
-		VkPipelineStageFlags aSrcStage, VkPipelineStageFlags aDstStage,
-		uint32_t aMipLevel, uint32_t aMipLevelCount,
-		uint32_t aArrayLayer, uint32_t aArrayLayerCount,
-		VkImageLayout aNewLayout
-	) {
+	VkResult image::read(void* aDestinationData, std::vector<VkBufferImageCopy> aRegionList) {
 
-		VkImageMemoryBarrier Barrier {};
-		//vkCmdPipelineBarrier()
 	}
 
 	void image::zero_out() {
