@@ -324,13 +324,10 @@ namespace geodesuka::core::gcl {
 		static size_t bitsperpixel(int aFormat);
 		static VkImageAspectFlags aspect_flag(int aFormat);
 
-		// -------------------- Host Memory -------------------- //
-
 		// Host memory images.
 		image();
-
+		// All created images will be in SHADER_READ_ONLY state.
 		image(context* aContext, create_info aCreateInfo, format aFormat, uint aX, uint aY, uint aZ, uint aT, void* aTextureData);
-
 		// Copy Constructor.
 		image(image& aInput);
 		// Move Constructor.
@@ -351,16 +348,12 @@ namespace geodesuka::core::gcl {
 
 		// Device Operation: T.
 		command_list transition(
-			//device::operation aDeviceOperation,
-			VkAccessFlags aSrcAccessMask, VkAccessFlags aDstAccessMask,
 			VkPipelineStageFlags aSrcStage, VkPipelineStageFlags aDstStage,
-			VkImageLayout aNewLayout,
+			VkAccessFlags aSrcAccessMask, VkAccessFlags aDstAccessMask,
+			VkImageLayout aOldLayout, VkImageLayout aNewLayout,
 			uint32_t aMipLevel = 0, uint32_t aMipLevelCount = UINT32_MAX,
 			uint32_t aArrayLayerStart = 0, uint32_t aArrayLayerCount = UINT32_MAX
 		);
-
-		// Device Operation: GRAPHICS.
-		command_list generate_mipmaps(VkFilter aFilter);
 
 		// Write to image data memory from host memory.
 		VkResult write(
@@ -416,10 +409,13 @@ namespace geodesuka::core::gcl {
 
 		// Generated Mipmap levels
 		std::vector<VkExtent3D> 						Extent;	// [MipLevel]
-		std::vector<std::vector<VkImageLayout>> 		Layout; // [MipLevel][ArrayLayer]
+		//std::vector<std::vector<VkImageLayout>> 		Layout; // [MipLevel][ArrayLayer]
 
 		void zero_out();
 		void clear();
+
+		// Device Operation: GRAPHICS.
+		command_list generate_mipmaps(VkFilter aFilter);
 
 	};
 

@@ -607,11 +607,11 @@ namespace geodesuka::core::gcl {
 			this->Extent[i] = { aX, aY, aZ };
 		}
 
-		for (uint32_t i = 0; i < this->CreateInfo.mipLevels; i++) {
-			for (uint32_t j = 0; this->CreateInfo.arrayLayers; j++) {
-				this->Layout[i][j] = VK_IMAGE_LAYOUT_UNDEFINED;
-			}
-		}
+		// for (uint32_t i = 0; i < this->CreateInfo.mipLevels; i++) {
+		// 	for (uint32_t j = 0; this->CreateInfo.arrayLayers; j++) {
+		// 		this->Layout[i][j] = VK_IMAGE_LAYOUT_UNDEFINED;
+		// 	}
+		// }
 
 		Result = vkCreateImage(aContext->handle(), &CreateInfo, NULL, &this->Handle);
 		if (Result != VK_SUCCESS) {
@@ -679,7 +679,7 @@ namespace geodesuka::core::gcl {
 		this->MemoryHandle = aInput.MemoryHandle;
 
 		this->Extent = aInput.Extent;
-		this->Layout = aInput.Layout;
+		//this->Layout = aInput.Layout;
 	}
 
 	// Destructor
@@ -737,30 +737,29 @@ namespace geodesuka::core::gcl {
 	}
 
 	command_list image::transition(
-			//device::operation aDeviceOperation,
-			VkAccessFlags aSrcAccessMask, VkAccessFlags aDstAccessMask,
-			VkPipelineStageFlags aSrcStage, VkPipelineStageFlags aDstStage,
-			VkImageLayout aNewLayout,
-			uint32_t aMipLevel, uint32_t aMipLevelCount,
-			uint32_t aArrayLayerStart, uint32_t aArrayLayerCount
+		VkPipelineStageFlags aSrcStage, VkPipelineStageFlags aDstStage,
+		VkAccessFlags aSrcAccessMask, VkAccessFlags aDstAccessMask,
+		VkImageLayout aOldLayout, VkImageLayout aNewLayout,
+		uint32_t aMipLevel, uint32_t aMipLevelCount,
+		uint32_t aArrayLayerStart, uint32_t aArrayLayerCount
 	) {
 		VkResult Result = VK_SUCCESS;
 
 		VkImageMemoryBarrier Barrier {};
-		Barrier.sType									= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		Barrier.pNext									= NULL;
-		Barrier.srcAccessMask							= aSrcAccessMask;
-		Barrier.dstAccessMask							= aDstAccessMask;
-		Barrier.oldLayout								= this->CreateInfo.initialLayout;
-		Barrier.newLayout								= aNewLayout;
-		Barrier.srcQueueFamilyIndex						= 0;
-		Barrier.dstQueueFamilyIndex						= 0;
-		Barrier.image									= this->Handle;
-		Barrier.subresourceRange.aspectMask				= this->aspect_flag(this->CreateInfo.format);
-		Barrier.subresourceRange.baseMipLevel			= aMipLevel;
-		Barrier.subresourceRange.levelCount 			= std::min(aMipLevelCount, this->CreateInfo.mipLevels - aMipLevel);
-		Barrier.subresourceRange.baseArrayLayer			= aArrayLayerStart;
-		Barrier.subresourceRange.layerCount				= std::min(aArrayLayerCount, this->CreateInfo.arrayLayers - aArrayLayerStart);
+		Barrier.sType								= VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		Barrier.pNext								= NULL;
+		Barrier.srcAccessMask						= aSrcAccessMask;
+		Barrier.dstAccessMask						= aDstAccessMask;
+		Barrier.oldLayout							= aOldLayout;
+		Barrier.newLayout							= aNewLayout;
+		Barrier.srcQueueFamilyIndex					= 0;
+		Barrier.dstQueueFamilyIndex					= 0;
+		Barrier.image								= this->Handle;
+		Barrier.subresourceRange.aspectMask			= this->aspect_flag(this->CreateInfo.format);
+		Barrier.subresourceRange.baseMipLevel		= aMipLevel;
+		Barrier.subresourceRange.levelCount 		= std::min(aMipLevelCount, this->CreateInfo.mipLevels - aMipLevel);
+		Barrier.subresourceRange.baseArrayLayer		= aArrayLayerStart;
+		Barrier.subresourceRange.layerCount			= std::min(aArrayLayerCount, this->CreateInfo.arrayLayers - aArrayLayerStart);
 
 		command_list CommandList = this->Context->create_command_list(device::operation::TRANSFER, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
 		VkCommandBufferBeginInfo BeginInfo {
@@ -840,19 +839,17 @@ namespace geodesuka::core::gcl {
 
 			command_list CommandList;
 
-			CommandList |= this->transition(
-				VK_ACCESS_MEMORY_WRITE_BIT, 					VK_ACCESS_MEMORY_READ_BIT,
-				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			// CommandList |= this->transition(
+			// 	VK_ACCESS_MEMORY_WRITE_BIT, 					VK_ACCESS_MEMORY_READ_BIT,
+			// 	VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 
-			);
+			// );
 
 			command_list CommandList = this->copy(StagingBuffer, Region);
 
 			this->Context->execute_and_wait(device::operation::TRANSFER, CommandList);
 
 			this->Context->destroy_command_list(device::operation::TRANSFER, CommandList);
-
-
 
 		}
 
@@ -879,7 +876,7 @@ namespace geodesuka::core::gcl {
 		this->MemoryType		= 0;
 		this->MemoryHandle		= VK_NULL_HANDLE;
 		this->Extent.clear();
-		this->Layout.clear();
+		//this->Layout.clear();
 	}
 
 	void image::clear() {
