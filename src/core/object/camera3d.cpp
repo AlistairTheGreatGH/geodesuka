@@ -216,11 +216,11 @@ namespace geodesuka::core::object {
 		ColorCreateInfo.Memory		= device::memory::DEVICE_LOCAL;
 		ColorCreateInfo.Usage		= image::usage::SAMPLED | image::usage::COLOR_ATTACHMENT;
 
-		this->DepthBuffer		= image(aContext, DepthCreateInfo, image::D32_SFLOAT, aResolution);
-		this->PixelColor		= image(aContext, ColorCreateInfo, type::id::FLOAT4, aResolution);
-		this->PixelPosition		= image(aContext, ColorCreateInfo, type::id::FLOAT4, aResolution);
-		this->PixelNormal		= image(aContext, ColorCreateInfo, type::id::FLOAT4, aResolution);
-		this->PixelSpecular		= image(aContext, ColorCreateInfo, type::id::FLOAT4, aResolution);
+		//this->DepthBuffer		= image(aContext, DepthCreateInfo, image::D32_SFLOAT, aResolution);
+		//this->PixelColor		= image(aContext, ColorCreateInfo, type::id::FLOAT4, aResolution);
+		//this->PixelPosition		= image(aContext, ColorCreateInfo, type::id::FLOAT4, aResolution);
+		//this->PixelNormal		= image(aContext, ColorCreateInfo, type::id::FLOAT4, aResolution);
+		//this->PixelSpecular		= image(aContext, ColorCreateInfo, type::id::FLOAT4, aResolution);
 
 		VkFence Fence 							= aContext->create_fence();
 		VkCommandBuffer CommandBuffer 		= aContext->create_command_buffer(device::GRAPHICS, VK_COMMAND_BUFFER_LEVEL_PRIMARY);
@@ -233,45 +233,45 @@ namespace geodesuka::core::object {
 
 		Result = vkBeginCommandBuffer(CommandBuffer, &BeginInfo);
 
-		this->DepthBuffer.cmd_transition(CommandBuffer,
-			VK_ACCESS_MEMORY_WRITE_BIT,
-			VK_ACCESS_MEMORY_READ_BIT,
-			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-			VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-		);
+		//this->DepthBuffer.cmd_transition(CommandBuffer,
+		//	VK_ACCESS_MEMORY_WRITE_BIT,
+		//	VK_ACCESS_MEMORY_READ_BIT,
+		//	VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		//	VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+		//	VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		//);
 
-		this->PixelColor.cmd_transition(CommandBuffer,
-			VK_ACCESS_MEMORY_WRITE_BIT,
-			VK_ACCESS_MEMORY_READ_BIT,
-			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-			VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-		);
+		//this->PixelColor.cmd_transition(CommandBuffer,
+		//	VK_ACCESS_MEMORY_WRITE_BIT,
+		//	VK_ACCESS_MEMORY_READ_BIT,
+		//	VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		//	VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+		//	VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		//);
 
-		this->PixelPosition.cmd_transition(CommandBuffer,
-			VK_ACCESS_MEMORY_WRITE_BIT,
-			VK_ACCESS_MEMORY_READ_BIT,
-			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-			VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-		);
+		//this->PixelPosition.cmd_transition(CommandBuffer,
+		//	VK_ACCESS_MEMORY_WRITE_BIT,
+		//	VK_ACCESS_MEMORY_READ_BIT,
+		//	VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		//	VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+		//	VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		//);
 
-		this->PixelNormal.cmd_transition(CommandBuffer,
-			VK_ACCESS_MEMORY_WRITE_BIT,
-			VK_ACCESS_MEMORY_READ_BIT,
-			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-			VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-		);
+		//this->PixelNormal.cmd_transition(CommandBuffer,
+		//	VK_ACCESS_MEMORY_WRITE_BIT,
+		//	VK_ACCESS_MEMORY_READ_BIT,
+		//	VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		//	VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+		//	VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		//);
 
-		this->PixelSpecular.cmd_transition(CommandBuffer,
-			VK_ACCESS_MEMORY_WRITE_BIT,
-			VK_ACCESS_MEMORY_READ_BIT,
-			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-			VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-			VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-		);
+		//this->PixelSpecular.cmd_transition(CommandBuffer,
+		//	VK_ACCESS_MEMORY_WRITE_BIT,
+		//	VK_ACCESS_MEMORY_READ_BIT,
+		//	VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+		//	VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+		//	VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+		//);
 
 		Result = vkEndCommandBuffer(CommandBuffer);
 
@@ -290,11 +290,11 @@ namespace geodesuka::core::object {
 		}
 
 		// Fill out attachment description
-		AttachmentDescription[0] = this->GeometryBuffer[0].DepthBuffer.description(VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE);
-		AttachmentDescription[1] = this->GeometryBuffer[0].PixelColor.description(VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE);
-		AttachmentDescription[2] = this->GeometryBuffer[0].PixelPosition.description(VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE);
-		AttachmentDescription[3] = this->GeometryBuffer[0].PixelNormal.description(VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE);
-		AttachmentDescription[4] = this->GeometryBuffer[0].PixelSpecular.description(VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE);
+		//AttachmentDescription[0] = this->GeometryBuffer[0].DepthBuffer.description(VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE);
+		//AttachmentDescription[1] = this->GeometryBuffer[0].PixelColor.description(VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE);
+		//AttachmentDescription[2] = this->GeometryBuffer[0].PixelPosition.description(VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE);
+		//AttachmentDescription[3] = this->GeometryBuffer[0].PixelNormal.description(VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE);
+		//AttachmentDescription[4] = this->GeometryBuffer[0].PixelSpecular.description(VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE);
 
 		return VK_SUCCESS;
 	}

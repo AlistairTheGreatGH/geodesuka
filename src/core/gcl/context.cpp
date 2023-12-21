@@ -225,6 +225,19 @@ namespace geodesuka::core::gcl {
 		}
 	}
 
+	VkResult context::begin(VkCommandBuffer aCommandBuffer) {
+		VkCommandBufferBeginInfo BeginInfo{};
+		BeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		BeginInfo.pNext = NULL;
+		BeginInfo.flags = 0;
+		BeginInfo.pInheritanceInfo = NULL;
+		return vkBeginCommandBuffer(aCommandBuffer, &BeginInfo);
+	}
+
+	VkResult context::end(VkCommandBuffer aCommandBuffer) {
+		return vkEndCommandBuffer(aCommandBuffer);
+	}
+
 	VkSemaphore context::create_semaphore() {
 		util::list<VkSemaphore> Semaphore = this->create_semaphore(1);
 		return Semaphore[0];

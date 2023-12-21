@@ -320,8 +320,8 @@ namespace geodesuka::core::gcl {
 
 		// Will yield the number of bits per pixel.
 		static format t2f(type::id aID);
-		static size_t bytesperpixel(int aFormat);
-		static size_t bitsperpixel(int aFormat);
+		static size_t bytes_per_pixel(int aFormat);
+		static size_t bits_per_pixel(int aFormat);
 		static VkImageAspectFlags aspect_flag(int aFormat);
 
 		// Host memory images.
@@ -341,13 +341,25 @@ namespace geodesuka::core::gcl {
 		image& operator=(image&& aRhs) noexcept;
 
 		// Device Operation Support: TRANSFER.
-		command_list copy(buffer& aSourceData, VkBufferImageCopy aRegion);
-		command_list copy(buffer& aSourceData, std::vector<VkBufferImageCopy> aRegionList);
-		command_list copy(image& aSourceData, VkImageCopy aRegion);
-		command_list copy(image& aSourceData, std::vector<VkImageCopy> aRegionList);
+		void copy(VkCommandBuffer aCommandBuffer, buffer& aSourceData, VkBufferImageCopy aRegion);
+		void copy(VkCommandBuffer aCommandBuffer, buffer& aSourceData, std::vector<VkBufferImageCopy> aRegionList);
+		void copy(VkCommandBuffer aCommandBuffer, image& aSourceData, VkImageCopy aRegion);
+		void copy(VkCommandBuffer aCommandBuffer, image& aSourceData, std::vector<VkImageCopy> aRegionList);
+		void transition(
+			VkCommandBuffer aCommandBuffer,
+			VkPipelineStageFlags aSrcStage, VkPipelineStageFlags aDstStage,
+			VkAccessFlags aSrcAccessMask, VkAccessFlags aDstAccessMask,
+			VkImageLayout aOldLayout, VkImageLayout aNewLayout,
+			uint32_t aMipLevel = 0, uint32_t aMipLevelCount = UINT32_MAX,
+			uint32_t aArrayLayerStart = 0, uint32_t aArrayLayerCount = UINT32_MAX
+		);
 
-		// Device Operation: T.
-		command_list transition(
+		// Executed Immediately
+		VkResult copy(buffer& aSourceData, VkBufferImageCopy aRegion);
+		VkResult copy(buffer& aSourceData, std::vector<VkBufferImageCopy> aRegionList);
+		VkResult copy(image& aSourceData, VkImageCopy aRegion);
+		VkResult copy(image& aSourceData, std::vector<VkImageCopy> aRegionList);
+		VkResult transition(
 			VkPipelineStageFlags aSrcStage, VkPipelineStageFlags aDstStage,
 			VkAccessFlags aSrcAccessMask, VkAccessFlags aDstAccessMask,
 			VkImageLayout aOldLayout, VkImageLayout aNewLayout,
@@ -373,28 +385,10 @@ namespace geodesuka::core::gcl {
 		);
 		VkResult read(void* aDestinationData, std::vector<VkBufferImageCopy> aRegionList);
 
-		VkAttachmentDescription description(VkAttachmentLoadOp aLoadOp, VkAttachmentStoreOp aStoreOp);
-		VkAttachmentDescription description(VkAttachmentLoadOp aLoadOp, VkAttachmentStoreOp aStoreOp, VkImageLayout aFinalLayout);
-
-		// Insure that all MipLevels and ArrayLayers have the same image layout before using a description.
-		// Insure that all mip levels, and array layers, have the same layout before using a description.
-		VkAttachmentDescription description(
-			VkAttachmentLoadOp aLoadOp, VkAttachmentStoreOp aStoreOp,
-			VkAttachmentLoadOp aStencilLoadOp, VkAttachmentStoreOp aStencilStoreOp,
-			VkImageLayout aInitialLayout, VkImageLayout aFinalLayout
-		);
-
-		// Generates image views from texture instance. (YOU ARE RESPONSIBLE FOR DESTROYING VIEWS)
-		VkImageView view();
-		//VkImageView view(vk_image_viewType aType, VkImageSubresourceRange aRange);
-		//VkImageView view(vk_image_viewType aType, VkComponentMapping aComponentMapping, VkImageSubresourceRange aRange);
-
 		// Total memory size of the image. (Does not include mip levels)
 		size_t get_memory_size() const;
 
 		VkImage handle();
-
-		void clear();
 
 	private:
 
@@ -408,14 +402,10 @@ namespace geodesuka::core::gcl {
 		VkDeviceMemory 									MemoryHandle;
 
 		// Generated Mipmap levels
-		std::vector<VkExtent3D> 						Extent;	// [MipLevel]
-		//std::vector<std::vector<VkImageLayout>> 		Layout; // [MipLevel][ArrayLayer]
+		std::vector<VkOffset3D> 						Extent;
 
 		void zero_out();
 		void clear();
-
-		// Device Operation: GRAPHICS.
-		command_list generate_mipmaps(VkFilter aFilter);
 
 	};
 

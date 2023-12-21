@@ -64,10 +64,15 @@ namespace geodesuka::core::gcl {
 		buffer& operator=(buffer&& aRhs) noexcept;
 
 		// Generates a transfer command which data between other buffers/images.
-		command_list copy(buffer& aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
-		command_list copy(buffer& aSourceData, std::vector<VkBufferCopy> aRegionList);
-		command_list copy(image& aSourceData, VkImageLayout aImageLayout, VkBufferImageCopy aRegion);
-		command_list copy(image& aSourceData, VkImageLayout aImageLayout, std::vector<VkBufferImageCopy> aRegionList);
+		void copy(VkCommandBuffer aCommandBuffer, buffer& aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
+		void copy(VkCommandBuffer aCommandBuffer, buffer& aSourceData, std::vector<VkBufferCopy> aRegionList);
+		void copy(VkCommandBuffer aCommandBuffer, image& aSourceData, VkImageLayout aImageLayout, VkBufferImageCopy aRegion);
+		void copy(VkCommandBuffer aCommandBuffer, image& aSourceData, VkImageLayout aImageLayout, std::vector<VkBufferImageCopy> aRegionList);
+
+		VkResult copy(buffer& aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
+		VkResult copy(buffer& aSourceData, std::vector<VkBufferCopy> aRegionList);
+		VkResult copy(image& aSourceData, VkImageLayout aImageLayout, VkBufferImageCopy aRegion);
+		VkResult copy(image& aSourceData, VkImageLayout aImageLayout, std::vector<VkBufferImageCopy> aRegionList);
 
 		// Write to buffer from host memory data.
 		VkResult write(void* aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);

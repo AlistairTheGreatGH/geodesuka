@@ -155,11 +155,11 @@ namespace geodesuka::core::gcl {
 		}
 	}
 
-	size_t image::bytesperpixel(int aFormat) {
-		return (image::bitsperpixel(aFormat) / 8);
+	size_t image::bytes_per_pixel(int aFormat) {
+		return (image::bits_per_pixel(aFormat) / 8);
 	}
 
-	size_t image::bitsperpixel(int aFormat) {
+	size_t image::bits_per_pixel(int aFormat) {
 
 		switch (aFormat) {
 		default: return 0;
@@ -602,10 +602,10 @@ namespace geodesuka::core::gcl {
 		this->CreateInfo.pQueueFamilyIndices		= NULL;
 		this->CreateInfo.initialLayout				= VK_IMAGE_LAYOUT_UNDEFINED;
 
-		// Memory of Layouts and Extents
-		for (uint32_t i = 0; i < this->CreateInfo.mipLevels; i++) {
-			this->Extent[i] = { aX, aY, aZ };
-		}
+		//// Memory of Layouts and Extents
+		//for (uint32_t i = 0; i < this->CreateInfo.mipLevels; i++) {
+		//	this->Extent[i] = { aX, aY, aZ };
+		//}
 
 		// for (uint32_t i = 0; i < this->CreateInfo.mipLevels; i++) {
 		// 	for (uint32_t j = 0; this->CreateInfo.arrayLayers; j++) {
@@ -628,10 +628,51 @@ namespace geodesuka::core::gcl {
 		// Bind the image object to the memory object.
 		Result = vkBindImageMemory(this->Context->handle(), this->Handle, this->MemoryHandle, 0);
 
-		// Generate Mipmaps
-		command_list GenerateMipMaps = this->generate_mipmaps(VkFilter::VK_FILTER_LINEAR);
-		this->Context->execute_and_wait(device::operation::GRAPHICS, GenerateMipMaps);
-		this->Context->destroy_command_list(device::operation::GRAPHICS, GenerateMipMaps);
+		// ----- Generate MipMaps
+
+		VkFilter FilterOperation = VK_FILTER_LINEAR;
+		VkCommandBuffer CommandBuffer = Context->create_command_buffer(device::operation::GRAPHICS);
+
+		this->transition(CommandBuffer, 
+			VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			VK_ACCESS_TRANSFER_READ_BIT, VK_ACCESS_TRANSFER_WRITE_BIT,
+			VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			0, this->CreateInfo.mipLevels
+		);
+
+		VkOffset3D d = { this->CreateInfo.extent.width, this->CreateInfo.extent.height, this->CreateInfo.extent.depth };
+		for (uint32_t i = 0; i < this->CreateInfo.mipLevels - 1; i++) {
+			VkImageBlit IBO{};
+
+			IBO.srcSubresource.aspectMask 		= aspect_flag(this->CreateInfo.format);
+			IBO.srcSubresource.mipLevel 		= i;
+			IBO.srcSubresource.baseArrayLayer 	= 0;
+			IBO.srcSubresource.layerCount 		= this->CreateInfo.arrayLayers;
+			IBO.srcOffsets[0] 					= { 0, 0, 0 };
+			IBO.srcOffsets[1] 					= Extent[i];
+
+			IBO.dstSubresource.aspectMask 		= aspect_flag(this->CreateInfo.format);
+			IBO.dstSubresource.mipLevel 		= i + 1;
+			IBO.dstSubresource.baseArrayLayer 	= 0;
+			IBO.dstSubresource.layerCount 		= this->CreateInfo.arrayLayers;
+			IBO.dstOffsets[0] 					= { 0, 0, 0 };
+			IBO.dstOffsets[1] 					= Extent[i + 1];
+
+			this->transition(CommandBuffer, 
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_ACCESS_TRANSFER_WRITE_BIT, VK_ACCESS_TRANSFER_READ_BIT,
+				VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				i, 1
+			);
+			vkCmdBlitImage(
+				CommandBuffer,
+				this->Handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				this->Handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				1, &IBO,
+				FilterOperation
+			);
+
+		}
 		
 	}
 
@@ -662,10 +703,7 @@ namespace geodesuka::core::gcl {
 		}
 
 		// Copy the image.
-		command_list CommandList = this->copy(aInput, RegionList);
-
-		// Execute transfer operations.
-		this->Context->execute_and_wait(device::operation::TRANSFER, CommandList);
+		this->copy(aInput, RegionList);
 
 	}
 
@@ -678,7 +716,7 @@ namespace geodesuka::core::gcl {
 		this->MemoryType = aInput.MemoryType;
 		this->MemoryHandle = aInput.MemoryHandle;
 
-		this->Extent = aInput.Extent;
+		//this->Extent = aInput.Extent;
 		//this->Layout = aInput.Layout;
 	}
 
@@ -690,53 +728,36 @@ namespace geodesuka::core::gcl {
 	// Copy Assignment.
 	image& image::operator=(image& aRhs) {
 
+		return *this;
 	}
 
 	// Move Assignment.
 	image& image::operator=(image&& aRhs) noexcept {
 		this->clear();
+		return *this;
 	}
 
 	// Device Operation Support: T.
-	command_list image::copy(buffer& aSourceData, VkBufferImageCopy aRegion) {
+	void image::copy(VkCommandBuffer aCommandBuffer, buffer& aSourceData, VkBufferImageCopy aRegion) {
 		std::vector<VkBufferImageCopy> RegionList = { aRegion };
-		return this->copy(aSourceData, RegionList);
+		this->copy(aCommandBuffer, aSourceData, RegionList);
 	}
 
-	command_list image::copy(buffer& aSourceData, std::vector<VkBufferImageCopy> aRegionList) {
-		VkResult Result = VK_SUCCESS;
-		command_list CommandList = this->Context->create_command_list(device::operation::TRANSFER, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
-		VkCommandBufferBeginInfo BeginInfo {};
-		BeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		BeginInfo.pNext = NULL;
-		BeginInfo.flags = 0;
-		BeginInfo.pInheritanceInfo = NULL;
-		Result = vkBeginCommandBuffer(CommandList[0], &BeginInfo);
-		vkCmdCopyBufferToImage(CommandList[0], aSourceData.handle(), this->Handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, aRegionList.size(), aRegionList.data());
-		Result = vkEndCommandBuffer(CommandList[0]);		
-		return CommandList;
+	void image::copy(VkCommandBuffer aCommandBuffer, buffer& aSourceData, std::vector<VkBufferImageCopy> aRegionList) {
+		vkCmdCopyBufferToImage(aCommandBuffer, aSourceData.handle(), this->Handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, aRegionList.size(), aRegionList.data());
 	}
 
-	command_list image::copy(image& aSourceData, VkImageCopy aRegion) {
+	void image::copy(VkCommandBuffer aCommandBuffer, image& aSourceData, VkImageCopy aRegion) {
 		std::vector<VkImageCopy> RegionList = { aRegion };
-		return this->copy(aSourceData, RegionList);
+		return this->copy(aCommandBuffer, aSourceData, RegionList);
 	}
 
-	command_list image::copy(image& aSourceData, std::vector<VkImageCopy> aRegionList) {
-		VkResult Result = VK_SUCCESS;
-		command_list CommandList = this->Context->create_command_list(device::operation::TRANSFER, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
-		VkCommandBufferBeginInfo BeginInfo {};
-		BeginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		BeginInfo.pNext = NULL;
-		BeginInfo.flags = 0;
-		BeginInfo.pInheritanceInfo = NULL;
-		Result = vkBeginCommandBuffer(CommandList[0], &BeginInfo);
-		vkCmdCopyImage(CommandList[0], aSourceData.handle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, this->Handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, aRegionList.size(), aRegionList.data());
-		Result = vkEndCommandBuffer(CommandList[0]);		
-		return CommandList;
+	void image::copy(VkCommandBuffer aCommandBuffer, image& aSourceData, std::vector<VkImageCopy> aRegionList) {
+		vkCmdCopyImage(aCommandBuffer, aSourceData.handle(), VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, this->Handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, aRegionList.size(), aRegionList.data());
 	}
 
-	command_list image::transition(
+	void image::transition(
+		VkCommandBuffer aCommandBuffer,
 		VkPipelineStageFlags aSrcStage, VkPipelineStageFlags aDstStage,
 		VkAccessFlags aSrcAccessMask, VkAccessFlags aDstAccessMask,
 		VkImageLayout aOldLayout, VkImageLayout aNewLayout,
@@ -761,25 +782,71 @@ namespace geodesuka::core::gcl {
 		Barrier.subresourceRange.baseArrayLayer		= aArrayLayerStart;
 		Barrier.subresourceRange.layerCount			= std::min(aArrayLayerCount, this->CreateInfo.arrayLayers - aArrayLayerStart);
 
-		command_list CommandList = this->Context->create_command_list(device::operation::TRANSFER, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
-		VkCommandBufferBeginInfo BeginInfo {
-			VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			NULL,
-			0,
-			NULL
-		};
-
-		Result = vkBeginCommandBuffer(CommandList[0], &BeginInfo);
 		vkCmdPipelineBarrier(
-			CommandList[0],
+			aCommandBuffer,
 			aSrcStage, aDstStage, 0,
 			0, NULL,
 			0, NULL,
 			1, &Barrier
 		);
-		Result = vkEndCommandBuffer(CommandList[0]);
 
-		return CommandList;
+	}
+
+	// Executed Immediately
+	VkResult image::copy(buffer& aSourceData, VkBufferImageCopy aRegion) {
+		std::vector<VkBufferImageCopy> RegionList = { aRegion };
+		return this->copy(aSourceData, RegionList);
+	}
+
+	VkResult image::copy(buffer& aSourceData, std::vector<VkBufferImageCopy> aRegionList) {
+		VkResult Result = VK_SUCCESS;
+		VkCommandBuffer CommandBuffer = Context->create_command_buffer(device::operation::TRANSFER);
+		Result = Context->begin(CommandBuffer);
+		this->copy(CommandBuffer, aSourceData, aRegionList);
+		Result = Context->end(CommandBuffer);
+		Result = Context->execute_and_wait(device::operation::TRANSFER, CommandBuffer);
+		Context->destroy_command_buffer(device::operation::TRANSFER, CommandBuffer);
+		return Result;
+	}
+
+	VkResult image::copy(image& aSourceData, VkImageCopy aRegion) {
+		std::vector<VkImageCopy> RegionList = { aRegion };
+		return this->copy(aSourceData, RegionList);
+	}
+
+	VkResult image::copy(image& aSourceData, std::vector<VkImageCopy> aRegionList) {
+		VkResult Result = VK_SUCCESS;
+		VkCommandBuffer CommandBuffer = Context->create_command_buffer(device::operation::TRANSFER);
+		Result = Context->begin(CommandBuffer);
+		this->copy(CommandBuffer, aSourceData, aRegionList);
+		Result = Context->end(CommandBuffer);
+		Result = Context->execute_and_wait(device::operation::TRANSFER, CommandBuffer);
+		Context->destroy_command_buffer(device::operation::TRANSFER, CommandBuffer);
+		return Result;
+	}
+
+	VkResult image::transition(
+		VkPipelineStageFlags aSrcStage, VkPipelineStageFlags aDstStage,
+		VkAccessFlags aSrcAccessMask, VkAccessFlags aDstAccessMask,
+		VkImageLayout aOldLayout, VkImageLayout aNewLayout,
+		uint32_t aMipLevel, uint32_t aMipLevelCount,
+		uint32_t aArrayLayerStart, uint32_t aArrayLayerCount
+	) {
+		VkResult Result = VK_SUCCESS;
+		VkCommandBuffer CommandBuffer = Context->create_command_buffer(device::operation::TRANSFER);
+		Result = Context->begin(CommandBuffer);
+		this->transition(
+			CommandBuffer, 
+			aSrcStage, aDstStage, 
+			aSrcAccessMask, aDstAccessMask, 
+			aOldLayout, aNewLayout, 
+			aMipLevel, aMipLevelCount, 
+			aArrayLayerStart, aArrayLayerCount
+		);
+		Result = Context->end(CommandBuffer);
+		Result = Context->execute_and_wait(device::operation::TRANSFER, CommandBuffer);
+		Context->destroy_command_buffer(device::operation::TRANSFER, CommandBuffer);
+		return Result;
 	}
 
 	// Write to image data memory from host memory.
@@ -805,22 +872,18 @@ namespace geodesuka::core::gcl {
 
 	VkResult image::write(void* aSourceData, std::vector<VkBufferImageCopy> aRegionList) {
 		VkResult Result = VK_SUCCESS;
-		// Note: I cannot think of a good chunk loading method for images, so instead I will
-		// just use a device local staging buffer.
 
-		// Find the largest region size of the list, and that will be the size of the staging
-		// buffer. This is to reduce redundant allocation of memory.
+		// Staging Buffer size is determined by the largest transfer region, and then allocated so that all regions can be copied to the buffer.
+		// without reallocation.
+
 		size_t StagingBufferSize = 0;
 		for (VkBufferImageCopy Region : aRegionList) {
-			size_t RegionSize = Region.imageExtent.width * Region.imageExtent.height * Region.imageExtent.depth * Region.imageSubresource.layerCount * bytesperpixel(this->CreateInfo.format);
+			size_t RegionSize = Region.imageExtent.width * Region.imageExtent.height * Region.imageExtent.depth * Region.imageSubresource.layerCount * bytes_per_pixel(this->CreateInfo.format);
 			if (StagingBufferSize < RegionSize) {
 				StagingBufferSize = RegionSize;
 			}
 		}
 
-		// For textures, considering they will be smaller than 3d models, we will use a staging buffer
-		// directly on the device for transfer operations. If image regions are larger than 16mb, then
-		// it will be chunk uploaded to GPU.
 		buffer StagingBuffer(
 			Context,
 			device::memory::DEVICE_LOCAL,
@@ -828,31 +891,19 @@ namespace geodesuka::core::gcl {
 			StagingBufferSize
 		);
 
-		// Iterate over each region to transfer data to device memory.
 		for (VkBufferImageCopy Region : aRegionList) {
 			
 			// Calculate Region Size
-			size_t RegionSize = Region.imageExtent.width * Region.imageExtent.height * Region.imageExtent.depth * Region.imageSubresource.layerCount * bytesperpixel(this->CreateInfo.format);
+			size_t RegionSize = Region.imageExtent.width * Region.imageExtent.height * Region.imageExtent.depth * Region.imageSubresource.layerCount * bytes_per_pixel(this->CreateInfo.format);
 			
 			// Write data to device buffer.
 			StagingBuffer.write(aSourceData, Region.bufferOffset, 0, RegionSize);
 
-			command_list CommandList;
-
-			// CommandList |= this->transition(
-			// 	VK_ACCESS_MEMORY_WRITE_BIT, 					VK_ACCESS_MEMORY_READ_BIT,
-			// 	VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-
-			// );
-
-			command_list CommandList = this->copy(StagingBuffer, Region);
-
-			this->Context->execute_and_wait(device::operation::TRANSFER, CommandList);
-
-			this->Context->destroy_command_list(device::operation::TRANSFER, CommandList);
+			this->copy(StagingBuffer, Region);
 
 		}
 
+		return Result;
 	}
 
 		// Read from image data memory to host memory.
@@ -860,13 +911,21 @@ namespace geodesuka::core::gcl {
 			void* aDestinationData, size_t aDestinationOffset, 									// Source data and offset.
 			uint32_t aSourceMipLevel,															// Selected Mip Level
 			VkOffset3D aSourceOffset, VkExtent3D aSourceExtent, 								// Destination offsets, Data Size = aExtent.width * aExtent.height * aExtent.depth * sizeof(format)
-			uint32_t aSourceArrayLayer = 0, uint32_t aSourceArrayLayerCount = 1 				// Array Layers which are optional
+			uint32_t aSourceArrayLayer, uint32_t aSourceArrayLayerCount							// Array Layers which are optional
 	) {
+		VkResult Result = VK_SUCCESS;
 
+		return Result;
 	}
 
 	VkResult image::read(void* aDestinationData, std::vector<VkBufferImageCopy> aRegionList) {
+		VkResult Result = VK_SUCCESS;
 
+		return Result;
+	}
+
+	VkImage image::handle() {
+		return this->Handle;
 	}
 
 	void image::zero_out() {
@@ -875,7 +934,6 @@ namespace geodesuka::core::gcl {
 		this->Handle			= VK_NULL_HANDLE;
 		this->MemoryType		= 0;
 		this->MemoryHandle		= VK_NULL_HANDLE;
-		this->Extent.clear();
 		//this->Layout.clear();
 	}
 

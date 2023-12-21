@@ -41,10 +41,13 @@ namespace geodesuka::core::gcl {
 
 		// Generates command buffers from builtin command pools associated with device context. Otherwise,
 		// user can create a custom command pool to manages command buffers.
-		VkCommandBuffer create_command_buffer(device::operation aDeviceOperation, VkCommandBufferLevel aLevel);
+		VkCommandBuffer create_command_buffer(device::operation aDeviceOperation, VkCommandBufferLevel aLevel = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 		command_list create_command_list(device::operation aDeviceOperation, VkCommandBufferLevel aLevel, uint aCount);
 		void destroy_command_buffer(device::operation aDeviceOperation, VkCommandBuffer aCommandBuffer);
 		void destroy_command_list(device::operation aDeviceOperation, command_list& aCommandList);
+
+		VkResult begin(VkCommandBuffer aCommandBuffer);
+		VkResult end(VkCommandBuffer aCommandBuffer);
 
 		// This series of methods are for the creation and destruction of semaphores for the synchronization
 		// between command_lists and VkSubmitInfo structures.

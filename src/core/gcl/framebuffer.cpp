@@ -14,10 +14,10 @@ namespace geodesuka::core::gcl {
 		this->Attachment = aAttachment;
 		this->View = (VkImageView*)malloc(this->AttachmentCount * sizeof(VkImageView));
 
-		// Generate Image Views for framebuffer.
-		for (uint32_t i = 0; i < this->AttachmentCount; i++) {
-			this->View[i] = this->Attachment[i].view();
-		}
+		//// Generate Image Views for framebuffer.
+		//for (uint32_t i = 0; i < this->AttachmentCount; i++) {
+		//	this->View[i] = this->Attachment[i].view();
+		//}
 
 		this->CreateInfo.sType				= VkStructureType::VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		this->CreateInfo.pNext				= NULL;

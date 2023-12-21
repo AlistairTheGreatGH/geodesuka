@@ -294,7 +294,7 @@ namespace geodesuka::core::io {
 			File = new font(aFilePath);
 			break;
 		case IMAGE:
-			File = new image(aFilePath);
+			//File = new image(aFilePath);
 			break;
 		case SHADER:
 			File = new shader(aFilePath);

@@ -325,7 +325,7 @@ namespace geodesuka::builtin::app {
 		//}
 		
 		// Gather data back from return buffer.
-		ReturnBuffer.read(BufferSize, ReturnData);
+		//ReturnBuffer.read(BufferSize, ReturnData);
 		
 		if (memcmp(BufferData, ReturnData, BufferSize) == 0) {
 			*Engine << "Buffer Data Matches, Operation Success!\n";
@@ -358,9 +358,9 @@ namespace geodesuka::builtin::app {
 			image::usage::COLOR_ATTACHMENT | image::usage::TRANSFER_SRC | image::usage::TRANSFER_DST
 		);
 
-		image Texture1(Context, I0CreateInfo, image::format::B8G8R8A8_SRGB, math::vec2<uint>(4, 4), TextureData);
+		//image Texture1(Context, I0CreateInfo, image::format::B8G8R8A8_SRGB, math::vec2<uint>(4, 4), TextureData);
 
-		image Texture2(Context, I0CreateInfo, image::format::B8G8R8A8_SRGB, math::vec2<uint>(4, 4));
+		//image Texture2(Context, I0CreateInfo, image::format::B8G8R8A8_SRGB, math::vec2<uint>(4, 4));
 		
 		buffer ReturnImage(Context, HostBufferCreateInfo, TextureSize, NULL);
 
@@ -388,7 +388,7 @@ namespace geodesuka::builtin::app {
 		//	Context->destroy_semaphore(Semaphore);
 		//}
 
-		ReturnImage.read(TextureSize, TextureReturn);
+		//ReturnImage.read(TextureSize, TextureReturn);
 
 		if (memcmp(TextureData, TextureData, TextureSize) == 0) {
 			*Engine << "Texture Data Matches, Operation Success!\n";

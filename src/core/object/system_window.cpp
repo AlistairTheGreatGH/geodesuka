@@ -430,9 +430,9 @@ namespace geodesuka::core::object {
 		Result = vkGetSwapchainImagesKHR(Context->handle(), Swapchain->handle(), &ImageCount, ImageHandle.data());
 		if (Result != VK_SUCCESS) return Result;
 
-		for (int i = 0; i < ImageCount; i++) {
-			this->Frame[i].Attachment[0] = this->Frame[i].Image[0].create_system_window_frame(Context, this->CreateInfo.imageFormat, this->CreateInfo.imageUsage, ImageHandle[i], this->FrameResolution);
-		}
+		//for (int i = 0; i < ImageCount; i++) {
+		//	this->Frame[i].Attachment[0] = this->Frame[i].Image[0].create_system_window_frame(Context, this->CreateInfo.imageFormat, this->CreateInfo.imageUsage, ImageHandle[i], this->FrameResolution);
+		//}
 
 		// Transition to Default being PRESENT_SRC
 		{
@@ -445,18 +445,18 @@ namespace geodesuka::core::object {
 			TransitionBeginInfo.flags = 0;
 			TransitionBeginInfo.pInheritanceInfo = NULL;
 
-			Result = vkBeginCommandBuffer(TransitionCommandBuffer, &TransitionBeginInfo);
+			//Result = vkBeginCommandBuffer(TransitionCommandBuffer, &TransitionBeginInfo);
 
-			for (int i = 0; i < this->Frame.size(); i++) {
-				this->Frame[i].Image[0].cmd_transition(
-					TransitionCommandBuffer,
-					VK_ACCESS_NONE,							VK_ACCESS_MEMORY_READ_BIT,
-					VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-															VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-				);
-			}
+			//for (int i = 0; i < this->Frame.size(); i++) {
+			//	this->Frame[i].Image[0].cmd_transition(
+			//		TransitionCommandBuffer,
+			//		VK_ACCESS_NONE,							VK_ACCESS_MEMORY_READ_BIT,
+			//		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,		VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			//												VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+			//	);
+			//}
 
-			Result = vkEndCommandBuffer(TransitionCommandBuffer);
+			//Result = vkEndCommandBuffer(TransitionCommandBuffer);
 
 			Result = Context->execute(device::operation::GRAPHICS, TransitionCommandBuffer, TransitionFence);
 
@@ -513,31 +513,31 @@ namespace geodesuka::core::object {
 			CSCBBI.flags				= 0;
 			CSCBBI.pInheritanceInfo		= NULL;
 
-			// Called before render operations, clears screen
-			Result = vkBeginCommandBuffer(PreRenderOperations[i][0], &CSCBBI);
-			Frame[i].Image[0].cmd_transition(
-				PreRenderOperations[i][0],
-				VK_ACCESS_NONE,							VK_ACCESS_MEMORY_WRITE_BIT,
-				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,		VK_PIPELINE_STAGE_TRANSFER_BIT,
-														VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-			);
-			vkCmdClearColorImage(PreRenderOperations[i][0], Frame[i].Image[0].Handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &ClearColor, 1, &Range);
-			Frame[i].Image[0].cmd_transition(
-				PreRenderOperations[i][0],
-				VK_ACCESS_MEMORY_WRITE_BIT,				VK_ACCESS_MEMORY_WRITE_BIT,
-				VK_PIPELINE_STAGE_TRANSFER_BIT,			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-														VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-			);
-			Result = vkEndCommandBuffer(PreRenderOperations[i][0]);
+			//// Called before render operations, clears screen
+			//Result = vkBeginCommandBuffer(PreRenderOperations[i][0], &CSCBBI);
+			//Frame[i].Image[0].cmd_transition(
+			//	PreRenderOperations[i][0],
+			//	VK_ACCESS_NONE,							VK_ACCESS_MEMORY_WRITE_BIT,
+			//	VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,		VK_PIPELINE_STAGE_TRANSFER_BIT,
+			//											VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+			//);
+			//vkCmdClearColorImage(PreRenderOperations[i][0], Frame[i].Image[0].Handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, &ClearColor, 1, &Range);
+			//Frame[i].Image[0].cmd_transition(
+			//	PreRenderOperations[i][0],
+			//	VK_ACCESS_MEMORY_WRITE_BIT,				VK_ACCESS_MEMORY_WRITE_BIT,
+			//	VK_PIPELINE_STAGE_TRANSFER_BIT,			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			//											VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+			//);
+			//Result = vkEndCommandBuffer(PreRenderOperations[i][0]);
 
-			Result = vkBeginCommandBuffer(PostRenderOperations[i][0], &CSCBBI);
-			Frame[i].Image[0].cmd_transition(
-				PostRenderOperations[i][0],
-				VK_ACCESS_MEMORY_WRITE_BIT,				VK_ACCESS_MEMORY_READ_BIT,
-				VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-														VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-			);
-			Result = vkEndCommandBuffer(PostRenderOperations[i][0]);
+			//Result = vkBeginCommandBuffer(PostRenderOperations[i][0], &CSCBBI);
+			//Frame[i].Image[0].cmd_transition(
+			//	PostRenderOperations[i][0],
+			//	VK_ACCESS_MEMORY_WRITE_BIT,				VK_ACCESS_MEMORY_READ_BIT,
+			//	VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,		VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+			//											VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+			//);
+			//Result = vkEndCommandBuffer(PostRenderOperations[i][0]);
 
 			//PreRenderOperations[i].wait_on(RenderWait, PipelineStageFlags);
 			//PostRenderOperations[i].signal_to(RenderComplete);

@@ -69,11 +69,7 @@ namespace geodesuka::core::gcl {
 		if (aInput.Context != nullptr) {
 			Result = this->create(aInput.Context, this->MemoryType, this->Usage, aInput.Size);
 
-			command_list TransferCommandList = this->copy(aInput, 0, 0, aInput.Size);
-
-			Result = this->Context->execute_and_wait(device::operation::TRANSFER, TransferCommandList);
-
-			this->Context->destroy_command_list(device::operation::TRANSFER, TransferCommandList);
+			this->copy(aInput, 0, 0, aInput.Size);
 		}
 	}
 
@@ -102,11 +98,7 @@ namespace geodesuka::core::gcl {
 			// Create buffer object.
 			Result = this->create(aRhs.Context, aRhs.MemoryType, aRhs.Usage, aRhs.Size);
 
-			command_list TransferCommandList = this->copy(aRhs, 0, 0, aRhs.Size);
-
-			Result = this->Context->execute_and_wait(device::operation::TRANSFER, TransferCommandList);
-
-			this->Context->destroy_command_list(device::operation::TRANSFER, TransferCommandList);
+			this->copy(aRhs, 0, 0, aRhs.Size);
 		}
 
 		return *this;
@@ -124,7 +116,31 @@ namespace geodesuka::core::gcl {
 		return *this;
 	}
 
-	command_list buffer::copy(buffer& aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize) {
+	void buffer::copy(VkCommandBuffer aCommandBuffer, buffer& aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize) {
+		VkBufferCopy Region{};
+		Region.srcOffset		= aSourceOffset;
+		Region.dstOffset		= aDestinationOffset;
+		Region.size				= aRegionSize;
+		std::vector<VkBufferCopy> RegionList;
+		RegionList.push_back(Region);
+		this->copy(aSourceData, RegionList);
+	}
+
+	void buffer::copy(VkCommandBuffer aCommandBuffer, buffer& aSourceData, std::vector<VkBufferCopy> aRegionList) {
+		vkCmdCopyBuffer(aCommandBuffer, aSourceData.Handle, this->Handle, aRegionList.size(), aRegionList.data());
+	}
+
+	void buffer::copy(VkCommandBuffer aCommandBuffer, image& aSourceData, VkImageLayout aImageLayout, VkBufferImageCopy aRegion) {
+		std::vector<VkBufferImageCopy> RegionList;
+		RegionList.push_back(aRegion);
+		this->copy(aSourceData, aImageLayout, RegionList);
+	}
+
+	void buffer::copy(VkCommandBuffer aCommandBuffer, image& aSourceData, VkImageLayout aImageLayout, std::vector<VkBufferImageCopy> aRegionList) {
+		vkCmdCopyImageToBuffer(aCommandBuffer, aSourceData.Handle, aImageLayout, this->Handle, aRegionList.size(), aRegionList.data());
+	}
+	
+	VkResult buffer::copy(buffer& aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize) {
 		VkBufferCopy Region{};
 		Region.srcOffset		= aSourceOffset;
 		Region.dstOffset		= aDestinationOffset;
@@ -134,46 +150,32 @@ namespace geodesuka::core::gcl {
 		return this->copy(aSourceData, RegionList);
 	}
 
-	command_list buffer::copy(buffer& aSourceData, std::vector<VkBufferCopy> aRegionList) {
+	VkResult buffer::copy(buffer& aSourceData, std::vector<VkBufferCopy> aRegionList) {
 		VkResult Result = VK_SUCCESS;
-		command_list CommandList = this->Context->create_command_list(device::operation::TRANSFER, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
-
-		VkCommandBufferBeginInfo BeginInfo{};
-		BeginInfo.sType 				= VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		BeginInfo.pNext 				= NULL;
-		BeginInfo.flags 				= 0;
-		BeginInfo.pInheritanceInfo 		= NULL;
-
-		// Fill out command buffer
-		Result = vkBeginCommandBuffer(CommandList[0], &BeginInfo);
-		vkCmdCopyBuffer(CommandList[0], aSourceData.Handle, this->Handle, aRegionList.size(), aRegionList.data());
-		Result = vkEndCommandBuffer(CommandList[0]);
-
-		return CommandList;
+		VkCommandBuffer CommandBuffer = Context->create_command_buffer(device::operation::TRANSFER);
+		Result = Context->begin(CommandBuffer);
+		this->copy(CommandBuffer, aSourceData, aRegionList);
+		Result = Context->end(CommandBuffer);
+		Result = Context->execute_and_wait(device::operation::TRANSFER, CommandBuffer);
+		Context->destroy_command_buffer(device::operation::TRANSFER, CommandBuffer);
+		return Result;
 	}
 
-	command_list buffer::copy(image& aSourceData, VkImageLayout aImageLayout, VkBufferImageCopy aRegion) {
+	VkResult buffer::copy(image& aSourceData, VkImageLayout aImageLayout, VkBufferImageCopy aRegion) {
 		std::vector<VkBufferImageCopy> RegionList;
 		RegionList.push_back(aRegion);
 		return this->copy(aSourceData, aImageLayout, RegionList);
 	}
 
-	command_list buffer::copy(image& aSourceData, VkImageLayout aImageLayout, std::vector<VkBufferImageCopy> aRegionList) {
+	VkResult buffer::copy(image& aSourceData, VkImageLayout aImageLayout, std::vector<VkBufferImageCopy> aRegionList) {
 		VkResult Result = VK_SUCCESS;
-		command_list CommandList = this->Context->create_command_list(device::operation::TRANSFER, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
-
-		VkCommandBufferBeginInfo BeginInfo{};
-		BeginInfo.sType 				= VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		BeginInfo.pNext 				= NULL;
-		BeginInfo.flags 				= 0;
-		BeginInfo.pInheritanceInfo 		= NULL;
-
-		// Fill out command buffer
-		Result = vkBeginCommandBuffer(CommandList[0], &BeginInfo);
-		vkCmdCopyImageToBuffer(CommandList[0], aSourceData.Handle, aImageLayout, this->Handle, aRegionList.size(), aRegionList.data());
-		Result = vkEndCommandBuffer(CommandList[0]);
-
-		return CommandList;
+		VkCommandBuffer CommandBuffer = Context->create_command_buffer(device::operation::TRANSFER);
+		Result = Context->begin(CommandBuffer);
+		this->copy(CommandBuffer, aSourceData, aImageLayout, aRegionList);
+		Result = Context->end(CommandBuffer);
+		Result = Context->execute_and_wait(device::operation::TRANSFER, CommandBuffer);
+		Context->destroy_command_buffer(device::operation::TRANSFER, CommandBuffer);
+		return Result;
 	}
 
 	VkResult buffer::write(void* aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize) {
@@ -226,14 +228,8 @@ namespace geodesuka::core::gcl {
 					// Write data to staging buffer, if less than ChunkSize, then we are done.
 					StagingBuffer.write(aSourceData, aRegionList[i].srcOffset + ChunkOffset, 0, ChunkSize);
 
-					// generate transfer commands.
-					command_list CommandList = this->copy(StagingBuffer, 0, aRegionList[i].dstOffset + ChunkOffset, ChunkSize);
-
-					// Execute command buffer
-					Result = this->Context->execute_and_wait(device::operation::TRANSFER, CommandList);
-
-					// After execution, destroy command buffer.
-					this->Context->destroy_command_list(device::operation::TRANSFER, CommandList);
+					// Execute transfer operation.
+					this->copy(StagingBuffer, 0, aRegionList[i].dstOffset + ChunkOffset, ChunkSize);
 
 					// Recalculate remaining data to send.
 					Remainder -= ChunkSize;
@@ -292,14 +288,8 @@ namespace geodesuka::core::gcl {
 					// Insure that we do not exceed the staging buffer size.
 					size_t ChunkSize = std::clamp(Remainder, (size_t)0, StagingBufferSize);
 
-					// Copy data from *this buffer into staging buffer.
-					command_list CommandList = StagingBuffer.copy(*this, aRegionList[i].srcOffset + ChunkOffset, 0, ChunkSize);
-
-					// Execute transfer operation.
-					this->Context->execute_and_wait(device::operation::TRANSFER, CommandList);
-
-					// Destroy Transfer Command List.
-					this->Context->destroy_command_list(device::operation::TRANSFER, CommandList);
+					// Copy *this into staging buffer.
+					StagingBuffer.copy(*this, aRegionList[i].srcOffset + ChunkOffset, 0, ChunkSize);
 
 					// Read staging buffer and copy into host memory aDestination Data.
 					StagingBuffer.read(aDestinationData, 0, aRegionList[i].dstOffset + ChunkOffset, ChunkSize);
@@ -312,6 +302,8 @@ namespace geodesuka::core::gcl {
 			}
 
 		}
+
+		return Result;
 	}
 
 
