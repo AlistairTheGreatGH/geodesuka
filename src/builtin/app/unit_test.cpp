@@ -39,6 +39,8 @@ namespace geodesuka::builtin::app {
 
 		Context = new context(Engine, Engine->PrimaryDevice, Layers, Extensions);
 
+		this->full_test();
+
 		// Setup window properties.
 		system_window::create_info Property;
 		Property.Swapchain.FrameCount			= 3;
@@ -67,6 +69,10 @@ namespace geodesuka::builtin::app {
 
 		delete Window;
 
+		delete Context;
+	}
+
+	void unit_test::full_test() {
 		// Random Unit Tests.
 		this->math_unit_test();
 		this->util_unit_test();
@@ -77,8 +83,6 @@ namespace geodesuka::builtin::app {
 		this->object_unit_test();
 		this->stage_unit_test();
 		this->app_unit_test();
-
-		delete Context;
 	}
 
 	void unit_test::math_unit_test() {
@@ -281,6 +285,12 @@ namespace geodesuka::builtin::app {
 			0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA,
 		};
 
+		unsigned char BufferData2[6 * 3] = {
+			0x69, 0xAA, 0x69, 0xAA, 0xAA, 0x69,
+			0xCC, 0xBB, 0xAA, 0xFF, 0xEE, 0xDD,
+			0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
+		};
+
 		// This will be used as a return buffer.
 		unsigned char ReturnData[6 * 3] = {
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -306,26 +316,14 @@ namespace geodesuka::builtin::app {
 
 		buffer ReturnBuffer(Context, HostBufferCreateInfo, BufferSize, NULL);
 
-		//{
-		//	util::list<VkFence> Fence = Context->create_fence(2);
-		//	command_list CommandList[2] = { command_list(1), command_list(1) };
+		// Copy To Device Buffer
+		DeviceBuffer.copy(SourceBuffer, 0, 0, BufferSize);
 
-		//	CommandList[0][0] = (DeviceBuffer << SourceBuffer);
-		//	CommandList[1][0] = (DeviceBuffer >> ReturnBuffer);
-		//	CommandList[1].depends_on(CommandList[0], VK_PIPELINE_STAGE_TRANSFER_BIT);
-
-		//	Result = Context->execute(device::operation::TRANSFER, CommandList[0], Fence[0]);
-		//	Result = Context->execute(device::operation::TRANSFER, CommandList[1], Fence[1]);
-		//	Result = vkWaitForFences(Context->handle(), 2, Fence.Handle.data(), VK_TRUE, UINT64_MAX);
-
-		//	Context->destroy_command_list(device::operation::TRANSFER, CommandList[0]);
-		//	Context->destroy_command_list(device::operation::TRANSFER, CommandList[1]);
-		//	Context->destroy_semaphore(Semaphore);
-		//	Context->destroy_fence(Fence);
-		//}
+		// Copy To Return Buffer
+		ReturnBuffer.copy(DeviceBuffer, 0, 0, BufferSize);
 		
 		// Gather data back from return buffer.
-		//ReturnBuffer.read(BufferSize, ReturnData);
+		ReturnBuffer.read(ReturnData, 0, 0, BufferSize);
 		
 		if (memcmp(BufferData, ReturnData, BufferSize) == 0) {
 			*Engine << "Buffer Data Matches, Operation Success!\n";
@@ -334,7 +332,21 @@ namespace geodesuka::builtin::app {
 			*Engine << "Buffer Data Does NOT Match, Operation Failure!\n";
 		}
 
+		DeviceBuffer.write(BufferData2, 0, 0, BufferSize);
+
+		ReturnBuffer.copy(DeviceBuffer, 0, 0, BufferSize);
+
+		ReturnBuffer.read(ReturnData, 0, 0, BufferSize);
+
+		if (memcmp(BufferData2, ReturnData, BufferSize) == 0) {
+			*Engine << "Buffer Data Matches, Operation Success!\n";
+		}
+		else {
+			*Engine << "Buffer Data Does NOT Match, Operation Failure!\n";
+		}
+
 		// -------------------- image.h unit testing ------------------------- //
+
 
 		size_t TextureSize = 4 * 4 * sizeof(uint);
 		uint TextureData[4 * 4] = {
@@ -351,44 +363,24 @@ namespace geodesuka::builtin::app {
 			0, 0, 0, 0
 		};
 
-		image::create_info I0CreateInfo(
+		image::create_info HostCreateInfo(
 			image::sample::COUNT_1, 
 			image::tiling::OPTIMAL, 
 			device::memory::DEVICE_LOCAL, 
 			image::usage::COLOR_ATTACHMENT | image::usage::TRANSFER_SRC | image::usage::TRANSFER_DST
 		);
 
-		//image Texture1(Context, I0CreateInfo, image::format::B8G8R8A8_SRGB, math::vec2<uint>(4, 4), TextureData);
+		image DeviceTexture(Context, HostCreateInfo, image::format::B8G8R8A8_SRGB, 4, 4);
 
-		//image Texture2(Context, I0CreateInfo, image::format::B8G8R8A8_SRGB, math::vec2<uint>(4, 4));
-		
-		buffer ReturnImage(Context, HostBufferCreateInfo, TextureSize, NULL);
+		image SecondTexture(Context, HostCreateInfo, image::format::B8G8R8A8_SRGB, 4, 4);
 
-		//{
-		//	VkResult Result = VK_SUCCESS;
-		//	VkFence Fence[2];
-		//	VkSemaphore Semaphore;
-		//	gcl::command_list CommandList[2] = { command_list(1), command_list(1) };
+		// Write To Texture.
+		//DeviceTexture.write(TextureData, 0, 0, {0, 0, 0}, {4, 4, 1});
 
-		//	Fence[0] = Context->create_fence();
-		//	Fence[1] = Context->create_fence();
-		//	Semaphore = Context->create_semaphore();
-		//	CommandList[0][0] = (Texture2 << Texture1);
-		//	CommandList[1][0] = (Texture2 >> ReturnImage);
-		//	CommandList[1].depends_on(Semaphore, CommandList[0], VK_PIPELINE_STAGE_TRANSFER_BIT);
+		VkImageCopy CopyRegion = {};
+		// Copy to Second Texture
+		//SecondTexture.copy(DeviceTexture, {{ 0, 1, 0, 1 }, {0, 0, 0}}, {{}, {0, 0, 0}}, {{}, {4, 4, 1}});
 
-		//	Result = Context->execute(gcl::device::operation::TRANSFER, CommandList[0], Fence[0]);
-		//	Result = Context->execute(gcl::device::operation::TRANSFER, CommandList[1], Fence[1]);
-		//	Result = vkWaitForFences(Context->handle(), 2, Fence, VK_TRUE, UINT64_MAX);
-
-		//	Context->destroy_fence(Fence[0]);
-		//	Context->destroy_fence(Fence[1]);
-		//	Context->destroy_command_list(gcl::device::operation::TRANSFER, CommandList[0]);
-		//	Context->destroy_command_list(gcl::device::operation::TRANSFER, CommandList[1]);
-		//	Context->destroy_semaphore(Semaphore);
-		//}
-
-		//ReturnImage.read(TextureSize, TextureReturn);
 
 		if (memcmp(TextureData, TextureData, TextureSize) == 0) {
 			*Engine << "Texture Data Matches, Operation Success!\n";

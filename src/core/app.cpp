@@ -35,30 +35,33 @@ namespace geodesuka::core {
 			Object |= Stage[i]->Object;
 		}
 
-		ObjectWorkload = calculate_workloads(Object.count(), this->EngineThreadCount);
-		StageWorkload = calculate_workloads(Stage.count(), this->EngineThreadCount);
+		size_t WorkloadThreadCount = omp_get_max_threads() - Engine->Thread.count() - 1;
+
+		ObjectWorkload = calculate_workloads(Object.count(), WorkloadThreadCount);
+		StageWorkload = calculate_workloads(Stage.count(), WorkloadThreadCount);
 		//CollisionWorkload = logic::calculate_workloads(Stage.count(), this->WorkerThreadCount);
 
 		// Parallel Work For Each Object & Stage
 		#pragma omp parallel
 		{
+			// Get Thread Index
 			int idx = omp_get_thread_num();
+
 			// Determine Workloads Regions For Each Thread.
-			size_t LocalStartObject = ObjectWorkload[idx].Offset;
-			size_t LocalEndObject = ObjectWorkload[idx].Offset + ObjectWorkload[idx].Size;
-			size_t LocalStartStage = StageWorkload[idx].Offset;
-			size_t LocalEndStage = StageWorkload[idx].Offset + StageWorkload[idx].Size;
+			size_t ObjectStartingIndex = ObjectWorkload[idx].Offset;
+			size_t ObjectEndingIndex = ObjectWorkload[idx].Offset + ObjectWorkload[idx].Size;
+
+			size_t StageStartingIndex = StageWorkload[idx].Offset;
+			size_t StageEndingIndex = StageWorkload[idx].Offset + StageWorkload[idx].Size;
 
 			// Update All Stage Specific Qualities.
-			for (size_t i = LocalStartObject; i < LocalEndObject; i++) {
-				//this->Object[i]->update(TimeStep);
+			for (size_t i = ObjectStartingIndex; i < ObjectEndingIndex; i++) {
+				Object[i]->update(aDeltaTime);
 			}
 
 			// Update All Stage Specific Qualities.
-			for (size_t i = LocalStartStage; i < LocalEndStage; i++) {
-				this->Stage[i]->update(aDeltaTime);
-
-				this->Stage[i]->collision_setup();
+			for (size_t i = StageStartingIndex; i < StageEndingIndex; i++) {
+				Stage[i]->update(aDeltaTime);
 			}
 
 		}

@@ -406,7 +406,7 @@ namespace geodesuka {
 		State = state::RUNNING;
 
 		// Spawn Core Engine Threads.
-		Thread |= new std::thread(&engine::render, this, aApp);
+		//Thread |= new std::thread(&engine::render, this, aApp);
 		//Thread |= new std::thread(&engine::audio, this);
 		//Thread |= new std::thread(&engine::terminal, this, aApp);
 		Thread |= new std::thread(&app::prerun, aApp);
@@ -464,15 +464,15 @@ namespace geodesuka {
 			
 			aApp->update(aApp->TimeStep.load());
 
-			Transfer = aApp->gather_transfer_operations();
+			//Transfer = aApp->gather_transfer_operations();
 
-			Compute = aApp->gather_compute_operations();
+			//Compute = aApp->gather_compute_operations();
 
 			aApp->Mutex.unlock();
 
 			// --------------- Per Device Context work is done here --------------- //
 
-			Result = this->execute_transfer_and_compute_operations(Transfer, Compute);
+			//Result = this->execute_transfer_and_compute_operations(Transfer, Compute);
 
 		}
 

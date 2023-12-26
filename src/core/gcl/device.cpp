@@ -82,6 +82,7 @@ namespace geodesuka::core::gcl {
 
 			// Counts 
 			this->QueueFamily[i].OperationCount = this->operation_count(this->QueueFamily[i].SupportedOperations);
+			this->QueueFamily[i].QueueCount = QueueFamilyProperties[i].queueCount;
 		}
 
 		/*
@@ -182,7 +183,7 @@ namespace geodesuka::core::gcl {
 		}
 
 		*aEngine << log::message(log::INFO, log::SUCCESS, "Engine Startup", log::GEODESUKA, "device", Properties.deviceName, StringStream.str().c_str());
-		*/
+		//*/
 
 	}
 
@@ -306,15 +307,16 @@ namespace geodesuka::core::gcl {
 		return (this->qfi(aOperation) != -1);
 	}
 
-	int device::qfi(uint aOperation) const {
-		int LowestOperationCountIndex = -1;
-		uint aOperationCount = this->operation_count(aOperation);
-		for (size_t i = 0; i < this->QueueFamily.size(); i++){
-			if (this->QueueFamily[i].OperationCount == aOperationCount) {
-				LowestOperationCountIndex = (int)i;
+	int device::qfi(uint aOp) const {
+		uint LOC = UINT32_MAX;
+		int LOCI = -1;
+		for (size_t i = 0; i < QueueFamily.size(); i++) {
+			if (((QueueFamily[i].SupportedOperations & aOp) == aOp) && (LOC > QueueFamily[i].OperationCount)) {
+				LOC = QueueFamily[i].OperationCount;
+				LOCI = i;
 			}
 		}
-		return LowestOperationCountIndex;
+		return LOCI;
 	}
 
 	VkInstance device::inst() {
@@ -326,11 +328,13 @@ namespace geodesuka::core::gcl {
 	}
 
 	uint device::operation_count(uint aOperation) const {
-		for (int i = 0; i < 8; i++) {
+		uint OperationCount = 0;
+		for (int i = 0; i < 32; i++) {
 			if (aOperation & (1 << i)) {
-				return i;
+				OperationCount++;
 			}
 		}
+		return OperationCount;
 	}
 
 	// device::operation operator|(device::operation aLhs, device::operation aRhs) {

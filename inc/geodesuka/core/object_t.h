@@ -65,7 +65,8 @@ namespace geodesuka::core {
 	public:
 
 		friend class geodesuka::engine;
-		friend class stage_t;
+		friend class geodesuka::core::app;
+		friend class geodesuka::core::stage_t;
 		friend class object::render_target;
 		friend class object_list;
 

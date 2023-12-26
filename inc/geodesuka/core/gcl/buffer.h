@@ -66,13 +66,13 @@ namespace geodesuka::core::gcl {
 		// Generates a transfer command which data between other buffers/images.
 		void copy(VkCommandBuffer aCommandBuffer, buffer& aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
 		void copy(VkCommandBuffer aCommandBuffer, buffer& aSourceData, std::vector<VkBufferCopy> aRegionList);
-		void copy(VkCommandBuffer aCommandBuffer, image& aSourceData, VkImageLayout aImageLayout, VkBufferImageCopy aRegion);
-		void copy(VkCommandBuffer aCommandBuffer, image& aSourceData, VkImageLayout aImageLayout, std::vector<VkBufferImageCopy> aRegionList);
+		void copy(VkCommandBuffer aCommandBuffer, image& aSourceData, VkBufferImageCopy aRegion);
+		void copy(VkCommandBuffer aCommandBuffer, image& aSourceData, std::vector<VkBufferImageCopy> aRegionList);
 
 		VkResult copy(buffer& aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
 		VkResult copy(buffer& aSourceData, std::vector<VkBufferCopy> aRegionList);
-		VkResult copy(image& aSourceData, VkImageLayout aImageLayout, VkBufferImageCopy aRegion);
-		VkResult copy(image& aSourceData, VkImageLayout aImageLayout, std::vector<VkBufferImageCopy> aRegionList);
+		VkResult copy(image& aSourceData, VkBufferImageCopy aRegion);
+		VkResult copy(image& aSourceData, std::vector<VkBufferImageCopy> aRegionList);
 
 		// Write to buffer from host memory data.
 		VkResult write(void* aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
@@ -82,25 +82,26 @@ namespace geodesuka::core::gcl {
 		VkResult read(void* aDestinationData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
 		VkResult read(void* aDestinationData, std::vector<VkBufferCopy> aRegionList);
 
-		VkBuffer& handle();
+		VkBufferMemoryBarrier memory_barrier(
+			uint aSrcAccess, uint aDstAccess,
+			size_t aOffset = 0, size_t aSize = UINT32_MAX
+		) const;
 
-		VkMemoryRequirements get_memory_requirements() const;
+		VkMemoryRequirements memory_requirements() const;
+
+		VkBuffer& handle();
 
 	private:
 
 		context*					Context;
-		
-		size_t 						Size;
-		uint 						Usage;
+
+		VkBufferCreateInfo 			CreateInfo;
 		VkBuffer					Handle;
 
 		uint 						MemoryType;
 		VkDeviceMemory				MemoryHandle;
 
-		VkResult create(context* aContext, uint aMemoryType, uint aBufferUsage, size_t aMemorySize, void* aBufferData = NULL);
-		VkBuffer create_handle(size_t aSize, uint aUsage);
-
-		void clear_device_memory();
+		void clear();
 
 		void zero_out();
 

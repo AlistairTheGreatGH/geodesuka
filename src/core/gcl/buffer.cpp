@@ -28,55 +28,58 @@ namespace geodesuka::core::gcl {
 		this->zero_out();
 	}
 
-	buffer::buffer(context* aContext, create_info aCreateInfo, int aVertexCount, variable aVertexLayout, void* aVertexData) {
-		VkResult Result = VK_SUCCESS;
-		size_t TotalSize = aVertexCount * aVertexLayout.size();
-		this->zero_out();
-
-		Result = this->create(aContext, aCreateInfo.MemoryType, aCreateInfo.BufferUsage, TotalSize, aVertexData);
+	buffer::buffer(context* aContext, create_info aCreateInfo, int aVertexCount, variable aVertexLayout, void* aVertexData) 
+		: buffer(aContext, aCreateInfo.MemoryType, aCreateInfo.BufferUsage, aVertexCount * aVertexLayout.size(), aVertexData) {
 	}
 
-	buffer::buffer(context* aContext, uint aMemoryType, uint aBufferUsage, int aVertexCount, variable aVertexLayout, void* aVertexData) {
-		VkResult Result = VK_SUCCESS;
-		size_t TotalSize = aVertexCount * aVertexLayout.size();
-		this->zero_out();
-
-		Result = this->create(aContext, aMemoryType, aBufferUsage, TotalSize, aVertexData);
+	buffer::buffer(context* aContext, uint aMemoryType, uint aBufferUsage, int aVertexCount, variable aVertexLayout, void* aVertexData)
+		: buffer(aContext, aMemoryType, aBufferUsage, aVertexCount * aVertexLayout.size(), aVertexData) {
 	}
 
-	buffer::buffer(context* aContext, create_info aCreateInfo, size_t aBufferSize, void* aBufferData) {
-		VkResult Result = VK_SUCCESS;
-		this->zero_out();
-
-		// Allocate Device Memory and Write Buffer
-		Result = this->create(aContext, aCreateInfo.MemoryType, aCreateInfo.BufferUsage, aBufferSize, aBufferData);
+	buffer::buffer(context* aContext, create_info aCreateInfo, size_t aBufferSize, void* aBufferData) 
+		: buffer(aContext, aCreateInfo.MemoryType, aCreateInfo.BufferUsage, aBufferSize, aBufferData) {
 	}
 
-	buffer::buffer(context* aContext, uint aMemoryType, uint aBufferUsage, size_t aBufferSize, void* aBufferData) {
-		VkResult Result = VK_SUCCESS;
-		this->zero_out();
-
-		// Create memory for vertex buffer.
-		Result = this->create(aContext, aMemoryType, aBufferUsage, aBufferSize, aBufferData);
-	}
-
-	buffer::buffer(buffer& aInput) {
+	buffer::buffer(context* aContext, uint aMemoryType, uint aBufferUsage, size_t aBufferSize, void* aBufferData) : buffer() {
 		VkResult Result = VK_SUCCESS;
 
-		// Zero out new object.
-		this->zero_out();
+		Context 								= aContext;
 
-		if (aInput.Context != nullptr) {
-			Result = this->create(aInput.Context, this->MemoryType, this->Usage, aInput.Size);
+		CreateInfo.sType						= VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		CreateInfo.pNext						= NULL;
+		CreateInfo.flags						= 0;
+		CreateInfo.size							= aBufferSize;
+		CreateInfo.usage						= (VkBufferUsageFlags)(aBufferUsage);// | buffer::usage::TRANSFER_SRC | buffer::usage::TRANSFER_DST);
+		CreateInfo.sharingMode					= VK_SHARING_MODE_EXCLUSIVE;
+		CreateInfo.queueFamilyIndexCount		= 0;
+		CreateInfo.pQueueFamilyIndices			= NULL;
 
-			this->copy(aInput, 0, 0, aInput.Size);
+		// Create Buffer Object
+		Result = vkCreateBuffer(Context->handle(), &CreateInfo, NULL, &Handle);
+
+		// Get Memory Requirements for Buffer.
+		VkMemoryRequirements MemoryRequirements = this->memory_requirements();
+
+		// Allocate memory for buffer.
+		MemoryType = aMemoryType;
+		MemoryHandle = Context->allocate_memory(MemoryRequirements, aMemoryType);
+
+		// Bind Buffer to allocated Memory.
+		Result = vkBindBufferMemory(this->Context->handle(), this->Handle, this->MemoryHandle, 0);
+
+		// Write data to buffer object.
+		if (aBufferData != NULL) {
+			this->write(aBufferData, 0, 0, aBufferSize);
 		}
+	}
+
+	buffer::buffer(buffer& aInput) : buffer(aInput.Context, aInput.MemoryType, aInput.CreateInfo.usage, aInput.CreateInfo.size, NULL) {
+		this->copy(aInput, 0, 0, aInput.CreateInfo.size);
 	}
 
 	buffer::buffer(buffer&& aInput) noexcept {
 		this->Context			= aInput.Context;
-		this->Size 				= aInput.Size;
-		this->Usage 			= aInput.Usage;
+		this->CreateInfo 		= aInput.CreateInfo;
 		this->Handle			= aInput.Handle;
 		this->MemoryType 		= aInput.MemoryType;
 		this->MemoryHandle		= aInput.MemoryHandle;
@@ -84,31 +87,28 @@ namespace geodesuka::core::gcl {
 	}
 
 	buffer::~buffer() {
-		this->clear_device_memory();
-		this->zero_out();
+		this->clear();
 	}
 
 	// TODO: Optimize for memory recycling.
 	buffer& buffer::operator=(buffer& aRhs) {
 		if (this == &aRhs) return *this;
+
 		VkResult Result = VK_SUCCESS;
-		this->clear_device_memory();
 
-		if (aRhs.Context != nullptr) {
-			// Create buffer object.
-			Result = this->create(aRhs.Context, aRhs.MemoryType, aRhs.Usage, aRhs.Size);
+		this->clear();
 
-			this->copy(aRhs, 0, 0, aRhs.Size);
-		}
+		*this = buffer(aRhs.Context, aRhs.MemoryType, aRhs.CreateInfo.usage, aRhs.CreateInfo.size, NULL);
+
+		Result = this->copy(aRhs, 0, 0, aRhs.CreateInfo.size);
 
 		return *this;
 	}
 
 	buffer& buffer::operator=(buffer&& aRhs) noexcept {
-		this->clear_device_memory();
+		this->clear();
 		this->Context			= aRhs.Context;
-		this->Size 				= aRhs.Size;
-		this->Usage 			= aRhs.Usage;
+		this->CreateInfo 		= aRhs.CreateInfo;
 		this->Handle			= aRhs.Handle;
 		this->MemoryType 		= aRhs.MemoryType;
 		this->MemoryHandle		= aRhs.MemoryHandle;
@@ -123,21 +123,26 @@ namespace geodesuka::core::gcl {
 		Region.size				= aRegionSize;
 		std::vector<VkBufferCopy> RegionList;
 		RegionList.push_back(Region);
-		this->copy(aSourceData, RegionList);
+		this->copy(aCommandBuffer, aSourceData, RegionList);
 	}
 
 	void buffer::copy(VkCommandBuffer aCommandBuffer, buffer& aSourceData, std::vector<VkBufferCopy> aRegionList) {
 		vkCmdCopyBuffer(aCommandBuffer, aSourceData.Handle, this->Handle, aRegionList.size(), aRegionList.data());
 	}
 
-	void buffer::copy(VkCommandBuffer aCommandBuffer, image& aSourceData, VkImageLayout aImageLayout, VkBufferImageCopy aRegion) {
+	void buffer::copy(VkCommandBuffer aCommandBuffer, image& aSourceData, VkBufferImageCopy aRegion) {
 		std::vector<VkBufferImageCopy> RegionList;
 		RegionList.push_back(aRegion);
-		this->copy(aSourceData, aImageLayout, RegionList);
+		this->copy(aCommandBuffer, aSourceData, RegionList);
 	}
 
-	void buffer::copy(VkCommandBuffer aCommandBuffer, image& aSourceData, VkImageLayout aImageLayout, std::vector<VkBufferImageCopy> aRegionList) {
-		vkCmdCopyImageToBuffer(aCommandBuffer, aSourceData.Handle, aImageLayout, this->Handle, aRegionList.size(), aRegionList.data());
+	void buffer::copy(VkCommandBuffer aCommandBuffer, image& aSourceData, std::vector<VkBufferImageCopy> aRegionList) {
+		vkCmdCopyImageToBuffer(
+			aCommandBuffer, 
+			aSourceData.Handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 
+			this->Handle, 
+			aRegionList.size(), aRegionList.data()
+		);
 	}
 	
 	VkResult buffer::copy(buffer& aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize) {
@@ -161,17 +166,17 @@ namespace geodesuka::core::gcl {
 		return Result;
 	}
 
-	VkResult buffer::copy(image& aSourceData, VkImageLayout aImageLayout, VkBufferImageCopy aRegion) {
+	VkResult buffer::copy(image& aSourceData, VkBufferImageCopy aRegion) {
 		std::vector<VkBufferImageCopy> RegionList;
 		RegionList.push_back(aRegion);
-		return this->copy(aSourceData, aImageLayout, RegionList);
+		return this->copy(aSourceData, RegionList);
 	}
 
-	VkResult buffer::copy(image& aSourceData, VkImageLayout aImageLayout, std::vector<VkBufferImageCopy> aRegionList) {
+	VkResult buffer::copy(image& aSourceData, std::vector<VkBufferImageCopy> aRegionList) {
 		VkResult Result = VK_SUCCESS;
 		VkCommandBuffer CommandBuffer = Context->create_command_buffer(device::operation::TRANSFER);
 		Result = Context->begin(CommandBuffer);
-		this->copy(CommandBuffer, aSourceData, aImageLayout, aRegionList);
+		this->copy(CommandBuffer, aSourceData, aRegionList);
 		Result = Context->end(CommandBuffer);
 		Result = Context->execute_and_wait(device::operation::TRANSFER, CommandBuffer);
 		Context->destroy_command_buffer(device::operation::TRANSFER, CommandBuffer);
@@ -306,78 +311,44 @@ namespace geodesuka::core::gcl {
 		return Result;
 	}
 
+	VkBufferMemoryBarrier buffer::memory_barrier(
+			uint aSrcAccess, uint aDstAccess,
+			size_t aOffset, size_t aSize
+	) const {
+		VkBufferMemoryBarrier MemoryBarrier{};
+		MemoryBarrier.sType						= VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+		MemoryBarrier.pNext						= NULL;
+		MemoryBarrier.srcAccessMask				= aSrcAccess;
+		MemoryBarrier.dstAccessMask				= aDstAccess;
+		MemoryBarrier.srcQueueFamilyIndex		= VK_QUEUE_FAMILY_IGNORED;
+		MemoryBarrier.dstQueueFamilyIndex		= VK_QUEUE_FAMILY_IGNORED;
+		MemoryBarrier.buffer					= this->Handle;
+		MemoryBarrier.offset					= aOffset;
+		MemoryBarrier.size						= std::min(aSize, this->CreateInfo.size - aOffset);
+		return MemoryBarrier;
+	}
+
+	VkMemoryRequirements buffer::memory_requirements() const {
+		return this->Context->get_buffer_memory_requirements(this->Handle);
+	}
 
 	VkBuffer& buffer::handle() {
 		return this->Handle;
 	}
 
-	VkMemoryRequirements buffer::get_memory_requirements() const {
-		return this->Context->get_buffer_memory_requirements(this->Handle);
-	}
-
-	VkResult buffer::create(context* aContext, uint aMemoryType, uint aBufferUsage, size_t aMemorySize, void* aBufferData) {
-		VkResult Result = VK_SUCCESS;
-
-		this->Context = aContext;
-		this->Size = aMemorySize;
-		this->Usage = aBufferUsage;
-		this->MemoryType = aMemoryType;
-
-		// Create Buffer Object
-		this->Handle = this->create_handle(aMemorySize, aBufferUsage);
-
-		// Get buffer memory requirements.
-		VkMemoryRequirements MemoryRequirements = this->get_memory_requirements();
-
-		// Allocate memory for buffer.
-		this->MemoryHandle = this->Context->allocate_memory(MemoryRequirements, aMemoryType);
-
-		// Bind Buffer to allocated Memory.
-		Result = vkBindBufferMemory(this->Context->handle(), this->Handle, this->MemoryHandle, 0);
-
-		this->write(aBufferData, 0, 0, aMemorySize);
-
-		return Result;
-	}
-
-	VkBuffer buffer::create_handle(size_t aSize, uint aUsage) {
-		VkResult Result = VK_SUCCESS;
-		VkBuffer NewHandle = VK_NULL_HANDLE;
-		VkBufferCreateInfo CreateInfo{};
-		// Create Buffer Object
-		CreateInfo.sType					= VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		CreateInfo.pNext					= NULL;
-		CreateInfo.flags					= 0; // Ignore.
-		CreateInfo.size						= aSize;
-		CreateInfo.usage					= (VkBufferUsageFlags)(aUsage | buffer::usage::TRANSFER_SRC | buffer::usage::TRANSFER_DST); // Enable Transfer
-		CreateInfo.sharingMode				= VK_SHARING_MODE_EXCLUSIVE;
-		CreateInfo.queueFamilyIndexCount	= 0;
-		CreateInfo.pQueueFamilyIndices		= NULL;
-		Result = vkCreateBuffer(this->Context->handle(), &CreateInfo, NULL, &NewHandle);
-		return NewHandle;
-	}
-
-	void buffer::clear_device_memory() {
-		if (this->Context != nullptr) {
-			if (this->Handle != VK_NULL_HANDLE) {
-				vkDestroyBuffer(this->Context->handle(), this->Handle, NULL);
-				this->Handle = VK_NULL_HANDLE;
+	void buffer::clear() {
+		if (Context != nullptr) {
+			if (Handle != VK_NULL_HANDLE) {
+				vkDestroyBuffer(Context->handle(), Handle, NULL);
 			}
-			if (this->MemoryHandle != VK_NULL_HANDLE) {
-				vkFreeMemory(this->Context->handle(), this->MemoryHandle, NULL);
-				this->MemoryHandle = VK_NULL_HANDLE;
-			}
+			Context->free_memory(MemoryHandle);
 		}
-		this->MemoryType 	= 0;		
-		this->Usage 		= 0;
-		this->Size 			= 0;
-		this->Context		= nullptr;
+		this->zero_out();
 	}
 
 	void buffer::zero_out() {
 		this->Context		= nullptr;
-		this->Size 			= 0;
-		this->Usage 		= 0;
+		this->CreateInfo 	= {};
 		this->Handle 		= VK_NULL_HANDLE;
 		this->MemoryType 	= 0;
 		this->MemoryHandle 	= VK_NULL_HANDLE;

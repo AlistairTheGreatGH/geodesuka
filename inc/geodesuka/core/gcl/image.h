@@ -59,7 +59,7 @@ namespace geodesuka::core::gcl {
 		};
 
 		enum format {			
-			UNDEFINED                                  		= VK_FORMAT_UNDEFINED,
+			FORMAT_UNDEFINED                                = VK_FORMAT_UNDEFINED,
 			R4G4_UNORM_PACK8                           		= VK_FORMAT_R4G4_UNORM_PACK8,
 			R4G4B4A4_UNORM_PACK16                      		= VK_FORMAT_R4G4B4A4_UNORM_PACK16,
 			B4G4R4A4_UNORM_PACK16                      		= VK_FORMAT_B4G4R4A4_UNORM_PACK16,
@@ -309,6 +309,52 @@ namespace geodesuka::core::gcl {
 			R16G16_S10_5_NV                            		= VK_FORMAT_R16G16_S10_5_NV,
 		};
 
+		enum layout : uint {
+			LAYOUT_UNDEFINED 											= VK_IMAGE_LAYOUT_UNDEFINED,
+			GENERAL 													= VK_IMAGE_LAYOUT_GENERAL,
+			COLOR_ATTACHMENT_OPTIMAL 									= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+			DEPTH_STENCIL_ATTACHMENT_OPTIMAL 							= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+			DEPTH_STENCIL_READ_ONLY_OPTIMAL 							= VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
+			SHADER_READ_ONLY_OPTIMAL 									= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			TRANSFER_SRC_OPTIMAL 										= VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			TRANSFER_DST_OPTIMAL 										= VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			PREINITIALIZED 												= VK_IMAGE_LAYOUT_PREINITIALIZED,
+			DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL 					= VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL,
+			DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL 					= VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL,
+			DEPTH_ATTACHMENT_OPTIMAL 									= VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL,
+			DEPTH_READ_ONLY_OPTIMAL 									= VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL,
+			STENCIL_ATTACHMENT_OPTIMAL 									= VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL,
+			STENCIL_READ_ONLY_OPTIMAL 									= VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL,
+			READ_ONLY_OPTIMAL 											= VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+			ATTACHMENT_OPTIMAL 											= VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+			PRESENT_SRC_KHR 											= VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+			VIDEO_DECODE_DST_KHR 										= VK_IMAGE_LAYOUT_VIDEO_DECODE_DST_KHR,
+			VIDEO_DECODE_SRC_KHR 										= VK_IMAGE_LAYOUT_VIDEO_DECODE_SRC_KHR,
+			VIDEO_DECODE_DPB_KHR 										= VK_IMAGE_LAYOUT_VIDEO_DECODE_DPB_KHR,
+			SHARED_PRESENT_KHR 											= VK_IMAGE_LAYOUT_SHARED_PRESENT_KHR,
+			FRAGMENT_DENSITY_MAP_OPTIMAL_EXT 							= VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT,
+			FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR 				= VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR,
+#ifdef VK_ENABLE_BETA_EXTENSIONS
+			VIDEO_ENCODE_DST_KHR 										= VK_IMAGE_LAYOUT_VIDEO_ENCODE_DST_KHR,
+#endif
+#ifdef VK_ENABLE_BETA_EXTENSIONS
+			VIDEO_ENCODE_SRC_KHR 										= VK_IMAGE_LAYOUT_VIDEO_ENCODE_SRC_KHR,
+#endif
+#ifdef VK_ENABLE_BETA_EXTENSIONS
+			VIDEO_ENCODE_DPB_KHR 										= VK_IMAGE_LAYOUT_VIDEO_ENCODE_DPB_KHR,
+#endif
+			ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT 						= VK_IMAGE_LAYOUT_ATTACHMENT_FEEDBACK_LOOP_OPTIMAL_EXT,
+			DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR 				= VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL_KHR,
+			DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR 				= VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL_KHR,
+			SHADING_RATE_OPTIMAL_NV 									= VK_IMAGE_LAYOUT_SHADING_RATE_OPTIMAL_NV,
+			DEPTH_ATTACHMENT_OPTIMAL_KHR 								= VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL_KHR,
+			DEPTH_READ_ONLY_OPTIMAL_KHR 								= VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL_KHR,
+			STENCIL_ATTACHMENT_OPTIMAL_KHR 								= VK_IMAGE_LAYOUT_STENCIL_ATTACHMENT_OPTIMAL_KHR,
+			STENCIL_READ_ONLY_OPTIMAL_KHR 								= VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL_KHR,
+			READ_ONLY_OPTIMAL_KHR 										= VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL_KHR,
+			ATTACHMENT_OPTIMAL_KHR 										= VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL_KHR,
+		};
+
 		struct create_info {
 			int Sample;
 			int Tiling;
@@ -327,6 +373,7 @@ namespace geodesuka::core::gcl {
 		// Host memory images.
 		image();
 		// All created images will be in SHADER_READ_ONLY state.
+		image(context* aContext, create_info aCreateInfo, format aFormat, uint aX, uint aY = 0, uint aZ = 0, uint aT = 0);
 		image(context* aContext, create_info aCreateInfo, format aFormat, uint aX, uint aY, uint aZ, uint aT, void* aTextureData);
 		// Copy Constructor.
 		image(image& aInput);
@@ -340,28 +387,17 @@ namespace geodesuka::core::gcl {
 		// Move Assignment.
 		image& operator=(image&& aRhs) noexcept;
 
-		// Device Operation Support: TRANSFER.
-		void copy(VkCommandBuffer aCommandBuffer, buffer& aSourceData, VkBufferImageCopy aRegion);
+		void copy(VkCommandBuffer aCommandBuffer, buffer& aSourceData, size_t aSourceOffset, VkOffset3D aDestinationOffset, uint32_t aDestinationArrayLayer, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount = UINT32_MAX);
 		void copy(VkCommandBuffer aCommandBuffer, buffer& aSourceData, std::vector<VkBufferImageCopy> aRegionList);
-		void copy(VkCommandBuffer aCommandBuffer, image& aSourceData, VkImageCopy aRegion);
+		void copy(VkCommandBuffer aCommandBuffer, image& aSourceData, VkOffset3D aSourceOffset, uint32_t aSourceArrayLayer, VkOffset3D aDestinationOffset, uint32_t aDestinationArrayLayer, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount = UINT32_MAX);
 		void copy(VkCommandBuffer aCommandBuffer, image& aSourceData, std::vector<VkImageCopy> aRegionList);
-		void transition(
-			VkCommandBuffer aCommandBuffer,
-			VkPipelineStageFlags aSrcStage, VkPipelineStageFlags aDstStage,
-			VkAccessFlags aSrcAccessMask, VkAccessFlags aDstAccessMask,
-			VkImageLayout aOldLayout, VkImageLayout aNewLayout,
-			uint32_t aMipLevel = 0, uint32_t aMipLevelCount = UINT32_MAX,
-			uint32_t aArrayLayerStart = 0, uint32_t aArrayLayerCount = UINT32_MAX
-		);
 
 		// Executed Immediately
-		VkResult copy(buffer& aSourceData, VkBufferImageCopy aRegion);
+		VkResult copy(buffer& aSourceData, size_t aSourceOffset, VkOffset3D aDestinationOffset, uint32_t aDestinationArrayLayer, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount = UINT32_MAX);
 		VkResult copy(buffer& aSourceData, std::vector<VkBufferImageCopy> aRegionList);
-		VkResult copy(image& aSourceData, VkImageCopy aRegion);
+		VkResult copy(image& aSourceData, VkOffset3D aSourceOffset, uint32_t aSourceArrayLayer, VkOffset3D aDestinationOffset, uint32_t aDestinationArrayLayer, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount = UINT32_MAX);
 		VkResult copy(image& aSourceData, std::vector<VkImageCopy> aRegionList);
 		VkResult transition(
-			VkPipelineStageFlags aSrcStage, VkPipelineStageFlags aDstStage,
-			VkAccessFlags aSrcAccessMask, VkAccessFlags aDstAccessMask,
 			VkImageLayout aOldLayout, VkImageLayout aNewLayout,
 			uint32_t aMipLevel = 0, uint32_t aMipLevelCount = UINT32_MAX,
 			uint32_t aArrayLayerStart = 0, uint32_t aArrayLayerCount = UINT32_MAX
@@ -369,24 +405,30 @@ namespace geodesuka::core::gcl {
 
 		// Write to image data memory from host memory.
 		VkResult write(
-			void* aSourceData, size_t aSourceOffset, 											// Source data and offset.
-			uint32_t aDestinationMipLevel,														// Selected Mip Level
-			VkOffset3D aDestinationOffset, VkExtent3D aDestinationExtent, 						// Destination offsets, Data Size = aExtent.width * aExtent.height * aExtent.depth * sizeof(format)
-			uint32_t aDestinationArrayLayer = 0, uint32_t aDestinationArrayLayerCount = 1 		// Array Layers which are optional
+			void* aSourceData, size_t aSourceOffset, 													// Source data and offset.
+//			uint32_t aDestinationMipLevel,																// Selected Mip Level
+			VkOffset3D aDestinationOffset, VkExtent3D aDestinationExtent, 								// Destination offsets, Data Size = aExtent.width * aExtent.height * aExtent.depth * sizeof(format)
+			uint32_t aDestinationArrayLayer = 0, uint32_t aDestinationArrayLayerCount = UINT32_MAX 		// Array Layers which are optional
 		);
 		VkResult write(void* aSourceData, std::vector<VkBufferImageCopy> aRegionList);
 
 		// Read from image data memory to host memory.
 		VkResult read(
-			void* aDestinationData, size_t aDestinationOffset, 									// Source data and offset.
-			uint32_t aSourceMipLevel,															// Selected Mip Level
-			VkOffset3D aSourceOffset, VkExtent3D aSourceExtent, 								// Destination offsets, Data Size = aExtent.width * aExtent.height * aExtent.depth * sizeof(format)
-			uint32_t aSourceArrayLayer = 0, uint32_t aSourceArrayLayerCount = 1 				// Array Layers which are optional
+			void* aDestinationData, size_t aDestinationOffset, 											// Destination data and offset.
+//			uint32_t aSourceMipLevel,																	// Selected Mip Level
+			VkOffset3D aSourceOffset, VkExtent3D aSourceExtent, 										// Source offsets, Data Size = aExtent.width * aExtent.height * aExtent.depth * sizeof(format)
+			uint32_t aSourceArrayLayer = 0, uint32_t aSourceArrayLayerCount = UINT32_MAX 				// Array Layers which are optional
 		);
 		VkResult read(void* aDestinationData, std::vector<VkBufferImageCopy> aRegionList);
 
-		// Total memory size of the image. (Does not include mip levels)
-		size_t get_memory_size() const;
+		VkImageMemoryBarrier memory_barrier(
+			uint aSrcAccess, uint aDstAccess,
+			uint aOldLayout, uint aNewLayout,
+			uint32_t aMipLevel = 0, uint32_t aMipLevelCount = UINT32_MAX,
+			uint32_t aArrayLayerStart = 0, uint32_t aArrayLayerCount = UINT32_MAX
+		) const;
+
+		VkMemoryRequirements memory_requirements() const;
 
 		VkImage handle();
 
@@ -402,7 +444,7 @@ namespace geodesuka::core::gcl {
 		VkDeviceMemory 									MemoryHandle;
 
 		// Generated Mipmap levels
-		std::vector<VkOffset3D> 						Extent;
+		// std::vector<VkOffset3D> 						Extent;
 
 		void zero_out();
 		void clear();

@@ -37,6 +37,8 @@ namespace geodesuka::builtin::app {
 		core::stage::canvas* 			Compositor;
 		core::stage::scene3d* 			Demo3D;
 
+		void full_test();
+		
 		void math_unit_test();
 		void util_unit_test();
 		void logic_unit_test();

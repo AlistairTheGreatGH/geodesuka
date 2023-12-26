@@ -66,8 +66,8 @@ namespace geodesuka::core::gcl {
 
 		// Buffer memory requirements.
 		// Image memory requirements.
-		VkMemoryRequirements get_buffer_memory_requirements(VkBuffer aBufferHandle);
-		VkMemoryRequirements get_image_memory_requirements(VkImage aImageHandle);
+		VkMemoryRequirements get_buffer_memory_requirements(VkBuffer aBufferHandle) const;
+		VkMemoryRequirements get_image_memory_requirements(VkImage aImageHandle) const;
 
 		// Memory Allocation.
 		VkDeviceMemory allocate_memory(VkMemoryRequirements aMemoryRequirements, uint aMemoryType);
@@ -151,7 +151,7 @@ namespace geodesuka::core::gcl {
 
 		std::vector<queue_family> 					Queue;
 
-		int qfi_to_i(device::operation aOperation);
+		int uqfi_index(device::operation aOperation);
 
 	};
 

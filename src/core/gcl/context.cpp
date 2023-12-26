@@ -29,6 +29,7 @@ namespace geodesuka::core::gcl {
 		this->Device = aDevice;
 
 		// Generate a list of supported operations.
+		this->QFI = std::vector<int>(5);
 		this->QFI[0] = this->Device->qfi(device::operation::TRANSFER);
 		this->QFI[1] = this->Device->qfi(device::operation::COMPUTE);
 		this->QFI[2] = this->Device->qfi(device::operation::GRAPHICS);
@@ -36,31 +37,30 @@ namespace geodesuka::core::gcl {
 		this->QFI[4] = this->Device->qfi(device::operation::PRESENT);
 
 		// Compose a set of Unique Queue Family Indices (UQFI), for Device Creation.
-		for (size_t i = 0; i < this->QFI.size(); i++) {
-			if (QFI[i] == -1 ) continue;
-			if (UQFI.size () != 0) {
+		// Checks if a QFI already exists in the list, if it doesn't, it adds it.
+		for (int i : QFI) {
+			if (i == -1) continue;
+			if (UQFI.size() != 0) {
 				bool AlreadyExistsInSet = false;
-				for (size_t j = 0; j < UQFI.size(); j++) {
-					AlreadyExistsInSet |= (UQFI[j] == QFI[i]);
+				for (int j : UQFI) {
+					AlreadyExistsInSet |= (j == i);
 				}
 				if (!AlreadyExistsInSet) {
-					UQFI.push_back(QFI[i]);
+					UQFI.push_back(i);
 				}
 			}
 			else {
-				UQFI.push_back(QFI[i]);
+				UQFI.push_back(i);
 			}
 		}
 
-		this->QueueCreateInfo.resize(UQFI.size());
+		std::vector<device::qfp> QueueFamilyProperty = this->Device->get_queue_family_properties();
 
-		std::vector<device::qfp> QueueFamily = this->Device->get_queue_family_properties();
-
-		for (size_t i = 0; i < UQFI.size(); i++) {
-			Queue.emplace_back(QueueFamily[UQFI[i]]);
+		for (int i : UQFI) {
+			Queue.emplace_back(QueueFamilyProperty[i]);
 		}
 
-		for (size_t i = 0; i < Queue.size(); i++) {
+		for (size_t i = 0; i < UQFI.size(); i++) {
 			VkDeviceQueueCreateInfo NewQueueCreateInfo{};
 			NewQueueCreateInfo.sType				= VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 			NewQueueCreateInfo.pNext				= NULL;
@@ -275,7 +275,7 @@ namespace geodesuka::core::gcl {
 	}
 
 	VkFence context::create_fence(VkFenceCreateFlags aFenceCreateFlags) {
-		util::list<VkFence> Fence = this->create_fence(aFenceCreateFlags, 1);
+		util::list<VkFence> Fence = this->create_fence(1, aFenceCreateFlags);
 		return Fence[0];
 	}
 
@@ -306,13 +306,13 @@ namespace geodesuka::core::gcl {
 		}
 	}
 
-	VkMemoryRequirements context::get_buffer_memory_requirements(VkBuffer aBufferHandle) {
+	VkMemoryRequirements context::get_buffer_memory_requirements(VkBuffer aBufferHandle) const {
 		VkMemoryRequirements MemoryRequirements;
 		vkGetBufferMemoryRequirements(this->Handle, aBufferHandle, &MemoryRequirements);
 		return MemoryRequirements;
 	}
 
-	VkMemoryRequirements context::get_image_memory_requirements(VkImage aImageHandle) {
+	VkMemoryRequirements context::get_image_memory_requirements(VkImage aImageHandle) const {
 		VkMemoryRequirements MemoryRequirements;
 		vkGetImageMemoryRequirements(this->Handle, aImageHandle, &MemoryRequirements);
 		return MemoryRequirements;
@@ -416,7 +416,7 @@ namespace geodesuka::core::gcl {
 	}
 
 	VkResult context::execute_and_wait(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList) {
-		return this->execute_and_wait(device::operation::PRESENT, aSubmissionList, std::vector<VkPresentInfoKHR>(0));
+		return this->execute_and_wait(aDeviceOperation, aSubmissionList, std::vector<VkPresentInfoKHR>(0));
 	}
 
 	VkResult context::execute_and_wait(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList, const std::vector<VkPresentInfoKHR>& aPresentationList) {
@@ -431,7 +431,7 @@ namespace geodesuka::core::gcl {
 	VkResult context::execute(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList, const std::vector<VkPresentInfoKHR>& aPresentationList, VkFence aFence) {
 		VkResult Result = VK_SUCCESS;
 
-		int i = this->qfi_to_i(aDeviceOperation);
+		int i = this->uqfi_index(aDeviceOperation);
 		int j = 0;
 
 		// Queue Operation Not supported.
@@ -553,7 +553,7 @@ namespace geodesuka::core::gcl {
 		return this->Handle.size();
 	}
 
-	int context::qfi_to_i(device::operation aOperation) {
+	int context::uqfi_index(device::operation aOperation) {
 		for (size_t i = 0; i < UQFI.size(); i++) {
 			if (this->qfi(aOperation) == UQFI[i]) {
 				return i;
