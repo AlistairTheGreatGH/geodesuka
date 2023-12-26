@@ -373,8 +373,7 @@ namespace geodesuka::core::gcl {
 		// Host memory images.
 		image();
 		// All created images will be in SHADER_READ_ONLY state.
-		image(context* aContext, create_info aCreateInfo, format aFormat, uint aX, uint aY = 0, uint aZ = 0, uint aT = 0);
-		image(context* aContext, create_info aCreateInfo, format aFormat, uint aX, uint aY, uint aZ, uint aT, void* aTextureData);
+		image(context* aContext, create_info aCreateInfo, format aFormat, uint aX, uint aY = 1, uint aZ = 1, uint aT = 1, void* aTextureData = NULL);
 		// Copy Constructor.
 		image(image& aInput);
 		// Move Constructor.
@@ -387,38 +386,36 @@ namespace geodesuka::core::gcl {
 		// Move Assignment.
 		image& operator=(image&& aRhs) noexcept;
 
-		void copy(VkCommandBuffer aCommandBuffer, buffer& aSourceData, size_t aSourceOffset, VkOffset3D aDestinationOffset, uint32_t aDestinationArrayLayer, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount = UINT32_MAX);
+		void copy(VkCommandBuffer aCommandBuffer, VkOffset3D aDestinationOffset, uint32_t aDestinationArrayLayer, buffer& aSourceData, size_t aSourceOffset, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount = UINT32_MAX);
 		void copy(VkCommandBuffer aCommandBuffer, buffer& aSourceData, std::vector<VkBufferImageCopy> aRegionList);
-		void copy(VkCommandBuffer aCommandBuffer, image& aSourceData, VkOffset3D aSourceOffset, uint32_t aSourceArrayLayer, VkOffset3D aDestinationOffset, uint32_t aDestinationArrayLayer, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount = UINT32_MAX);
+		void copy(VkCommandBuffer aCommandBuffer, VkOffset3D aDestinationOffset, uint32_t aDestinationArrayLayer, image& aSourceData, VkOffset3D aSourceOffset, uint32_t aSourceArrayLayer, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount = UINT32_MAX);
 		void copy(VkCommandBuffer aCommandBuffer, image& aSourceData, std::vector<VkImageCopy> aRegionList);
-
-		// Executed Immediately
-		VkResult copy(buffer& aSourceData, size_t aSourceOffset, VkOffset3D aDestinationOffset, uint32_t aDestinationArrayLayer, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount = UINT32_MAX);
-		VkResult copy(buffer& aSourceData, std::vector<VkBufferImageCopy> aRegionList);
-		VkResult copy(image& aSourceData, VkOffset3D aSourceOffset, uint32_t aSourceArrayLayer, VkOffset3D aDestinationOffset, uint32_t aDestinationArrayLayer, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount = UINT32_MAX);
-		VkResult copy(image& aSourceData, std::vector<VkImageCopy> aRegionList);
-		VkResult transition(
-			VkImageLayout aOldLayout, VkImageLayout aNewLayout,
+		void transition(
+			VkCommandBuffer aCommandBuffer,
+			layout aCurrentLayout, layout aFinalLayout,
+			VkPipelineStageFlags aSrcStageMask = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VkPipelineStageFlags aDstStageMask = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
 			uint32_t aMipLevel = 0, uint32_t aMipLevelCount = UINT32_MAX,
 			uint32_t aArrayLayerStart = 0, uint32_t aArrayLayerCount = UINT32_MAX
 		);
 
-		// Write to image data memory from host memory.
-		VkResult write(
-			void* aSourceData, size_t aSourceOffset, 													// Source data and offset.
-//			uint32_t aDestinationMipLevel,																// Selected Mip Level
-			VkOffset3D aDestinationOffset, VkExtent3D aDestinationExtent, 								// Destination offsets, Data Size = aExtent.width * aExtent.height * aExtent.depth * sizeof(format)
-			uint32_t aDestinationArrayLayer = 0, uint32_t aDestinationArrayLayerCount = UINT32_MAX 		// Array Layers which are optional
+		// Executed Immediately
+		VkResult copy(VkOffset3D aDestinationOffset, uint32_t aDestinationArrayLayer, buffer& aSourceData, size_t aSourceOffset, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount = UINT32_MAX);
+		VkResult copy(buffer& aSourceData, std::vector<VkBufferImageCopy> aRegionList);
+		VkResult copy(VkOffset3D aDestinationOffset, uint32_t aDestinationArrayLayer, image& aSourceData, VkOffset3D aSourceOffset, uint32_t aSourceArrayLayer, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount = UINT32_MAX);
+		VkResult copy(image& aSourceData, std::vector<VkImageCopy> aRegionList);
+		VkResult transition(
+			layout aCurrentLayout, layout aFinalLayout,
+			uint32_t aMipLevel = 0, uint32_t aMipLevelCount = UINT32_MAX,
+			uint32_t aArrayLayerStart = 0, uint32_t aArrayLayerCount = UINT32_MAX
 		);
+		VkResult generate_mipmaps(layout aCurrentLayout, layout aFinalLayout, VkFilter aFilter);
+
+		// Write to image data memory from host memory.
+		VkResult write(VkOffset3D aDestinationOffset, uint32_t aDestinationArrayLayer, void* aSourceData, size_t aSourceOffset, VkExtent3D aDestinationExtent, uint32_t aDestinationArrayLayerCount = UINT32_MAX);
 		VkResult write(void* aSourceData, std::vector<VkBufferImageCopy> aRegionList);
 
 		// Read from image data memory to host memory.
-		VkResult read(
-			void* aDestinationData, size_t aDestinationOffset, 											// Destination data and offset.
-//			uint32_t aSourceMipLevel,																	// Selected Mip Level
-			VkOffset3D aSourceOffset, VkExtent3D aSourceExtent, 										// Source offsets, Data Size = aExtent.width * aExtent.height * aExtent.depth * sizeof(format)
-			uint32_t aSourceArrayLayer = 0, uint32_t aSourceArrayLayerCount = UINT32_MAX 				// Array Layers which are optional
-		);
+		VkResult read(VkOffset3D aSourceOffset, uint32_t aSourceArrayLayer, void* aDestinationData, size_t aDestinationOffset, VkExtent3D aSourceExtent, uint32_t aSourceArrayLayerCount = UINT32_MAX);
 		VkResult read(void* aDestinationData, std::vector<VkBufferImageCopy> aRegionList);
 
 		VkImageMemoryBarrier memory_barrier(

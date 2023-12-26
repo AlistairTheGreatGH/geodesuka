@@ -62,24 +62,21 @@ namespace geodesuka::core::gcl {
 
 		buffer& operator=(buffer& aRhs);
 		buffer& operator=(buffer&& aRhs) noexcept;
-
-		// Generates a transfer command which data between other buffers/images.
-		void copy(VkCommandBuffer aCommandBuffer, buffer& aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
+		
+		void copy(VkCommandBuffer aCommandBuffer, size_t aDestinationOffset, buffer& aSourceData, size_t aSourceOffset, size_t aRegionSize);
 		void copy(VkCommandBuffer aCommandBuffer, buffer& aSourceData, std::vector<VkBufferCopy> aRegionList);
-		void copy(VkCommandBuffer aCommandBuffer, image& aSourceData, VkBufferImageCopy aRegion);
+		void copy(VkCommandBuffer aCommandBuffer, size_t aDestinationOffset, image& aSourceData, VkOffset3D aSourceOffset, uint32_t aSourceArrayLayer, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount = UINT32_MAX);
 		void copy(VkCommandBuffer aCommandBuffer, image& aSourceData, std::vector<VkBufferImageCopy> aRegionList);
 
-		VkResult copy(buffer& aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
+		VkResult copy(size_t aDestinationOffset, buffer& aSourceData, size_t aSourceOffset, size_t aRegionSize);
 		VkResult copy(buffer& aSourceData, std::vector<VkBufferCopy> aRegionList);
-		VkResult copy(image& aSourceData, VkBufferImageCopy aRegion);
+		VkResult copy(size_t aDestinationOffset, image& aSourceData, VkOffset3D aSourceOffset, uint32_t aSourceArrayLayer, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount = UINT32_MAX);
 		VkResult copy(image& aSourceData, std::vector<VkBufferImageCopy> aRegionList);
 
-		// Write to buffer from host memory data.
-		VkResult write(void* aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
+		VkResult write(size_t aDestinationOffset, void* aSourceData, size_t aSourceOffset, size_t aRegionSize);
 		VkResult write(void* aSourceData, std::vector<VkBufferCopy> aRegionList);
 
-		// Read from buffer data into host memory.
-		VkResult read(void* aDestinationData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize);
+		VkResult read(size_t aSourceOffset, void* aDestinationData, size_t aDestinationOffset, size_t aRegionSize);
 		VkResult read(void* aDestinationData, std::vector<VkBufferCopy> aRegionList);
 
 		VkBufferMemoryBarrier memory_barrier(

@@ -278,7 +278,6 @@ namespace geodesuka::builtin::app {
 
 		// -------------------- buffer.h unit testing ------------------------- //
 
-		size_t BufferSize = 6 * 3 * sizeof(unsigned char);
 		unsigned char BufferData[6 * 3] = {
 			0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF,
 			0x69, 0xAA, 0x69, 0xAA, 0xAA, 0x69,
@@ -299,7 +298,7 @@ namespace geodesuka::builtin::app {
 		};
 
 		buffer::create_info HostBufferCreateInfo(
-			device::memory::HOST_VISIBLE | device::memory::HOST_COHERENT, 
+			device::memory::HOST_VISIBLE | device::memory::HOST_COHERENT,
 			buffer::usage::VERTEX | buffer::usage::TRANSFER_SRC | buffer::usage::TRANSFER_DST
 		);
 
@@ -310,35 +309,37 @@ namespace geodesuka::builtin::app {
 		);
 
 		// Unit Test of buffer.h and image.h
-		buffer SourceBuffer(Context, HostBufferCreateInfo, BufferSize, BufferData);
+		buffer SourceBuffer(Context, HostBufferCreateInfo, sizeof(BufferData), BufferData);
 
-		buffer DeviceBuffer(Context, DeviceBufferCreateInfo, BufferSize, NULL);
+		buffer DeviceBuffer(Context, DeviceBufferCreateInfo, sizeof(BufferData), NULL);
 
-		buffer ReturnBuffer(Context, HostBufferCreateInfo, BufferSize, NULL);
+		buffer ReturnBuffer(Context, HostBufferCreateInfo, sizeof(BufferData), NULL);
 
 		// Copy To Device Buffer
-		DeviceBuffer.copy(SourceBuffer, 0, 0, BufferSize);
+		DeviceBuffer.copy(0, SourceBuffer, 0, sizeof(BufferData));
 
 		// Copy To Return Buffer
-		ReturnBuffer.copy(DeviceBuffer, 0, 0, BufferSize);
-		
+		ReturnBuffer.copy(0, DeviceBuffer, 0, sizeof(BufferData));
+
 		// Gather data back from return buffer.
-		ReturnBuffer.read(ReturnData, 0, 0, BufferSize);
-		
-		if (memcmp(BufferData, ReturnData, BufferSize) == 0) {
+		ReturnBuffer.read(0, ReturnData, 0, sizeof(BufferData));
+
+		if (memcmp(BufferData, ReturnData, sizeof(BufferData)) == 0) {
 			*Engine << "Buffer Data Matches, Operation Success!\n";
 		}
 		else {
 			*Engine << "Buffer Data Does NOT Match, Operation Failure!\n";
 		}
 
-		DeviceBuffer.write(BufferData2, 0, 0, BufferSize);
+		Result = DeviceBuffer.write(0, BufferData2, 0, sizeof(BufferData));
 
-		ReturnBuffer.copy(DeviceBuffer, 0, 0, BufferSize);
+		Result = DeviceBuffer.read(0, ReturnData, 0, sizeof(BufferData));
 
-		ReturnBuffer.read(ReturnData, 0, 0, BufferSize);
+		// Result = ReturnBuffer.copy(DeviceBuffer, 0, 0, sizeof(BufferData));
 
-		if (memcmp(BufferData2, ReturnData, BufferSize) == 0) {
+		// Result = ReturnBuffer.read(ReturnData, 0, 0, sizeof(BufferData));
+
+		if (memcmp(BufferData2, ReturnData, sizeof(BufferData)) == 0) {
 			*Engine << "Buffer Data Matches, Operation Success!\n";
 		}
 		else {
@@ -347,8 +348,6 @@ namespace geodesuka::builtin::app {
 
 		// -------------------- image.h unit testing ------------------------- //
 
-
-		size_t TextureSize = 4 * 4 * sizeof(uint);
 		uint TextureData[4 * 4] = {
 			0xAABBCCDD, 0xAABBCCDD, 0xAABBCCDD, 0xAABBCCDD,
 			0xAABBCCDD, 0xAABBCCDD, 0xAABBCCDD, 0xAABBCCDD,
@@ -363,26 +362,54 @@ namespace geodesuka::builtin::app {
 			0, 0, 0, 0
 		};
 
-		image::create_info HostCreateInfo(
-			image::sample::COUNT_1, 
-			image::tiling::OPTIMAL, 
-			device::memory::DEVICE_LOCAL, 
-			image::usage::COLOR_ATTACHMENT | image::usage::TRANSFER_SRC | image::usage::TRANSFER_DST
+		image::create_info TextureCreateInfo(
+			image::sample::COUNT_1,
+			image::tiling::OPTIMAL,
+			device::memory::DEVICE_LOCAL,
+			image::usage::COLOR_ATTACHMENT | image::usage::SAMPLED | image::usage::TRANSFER_SRC | image::usage::TRANSFER_DST
 		);
 
-		image DeviceTexture(Context, HostCreateInfo, image::format::B8G8R8A8_SRGB, 4, 4);
+		buffer StagingBuffer(Context, HostBufferCreateInfo, sizeof(TextureData), TextureData);
 
-		image SecondTexture(Context, HostCreateInfo, image::format::B8G8R8A8_SRGB, 4, 4);
+		buffer StagingBuffer2(Context, HostBufferCreateInfo, sizeof(TextureData));
 
-		// Write To Texture.
-		//DeviceTexture.write(TextureData, 0, 0, {0, 0, 0}, {4, 4, 1});
+		// Create Device Texture
+		image DeviceTexture(Context, TextureCreateInfo, image::format::B8G8R8A8_SRGB, 4, 4);
 
-		VkImageCopy CopyRegion = {};
-		// Copy to Second Texture
-		//SecondTexture.copy(DeviceTexture, {{ 0, 1, 0, 1 }, {0, 0, 0}}, {{}, {0, 0, 0}}, {{}, {4, 4, 1}});
+		Result = DeviceTexture.transition(image::layout::SHADER_READ_ONLY_OPTIMAL, image::layout::TRANSFER_DST_OPTIMAL);
 
+		Result = DeviceTexture.copy({ 0, 0, 0 }, 0, StagingBuffer, 0, { 4, 4, 1 });
 
-		if (memcmp(TextureData, TextureData, TextureSize) == 0) {
+		Result = DeviceTexture.transition(image::layout::TRANSFER_DST_OPTIMAL, image::layout::TRANSFER_SRC_OPTIMAL);
+
+		Result = StagingBuffer2.copy(0, DeviceTexture, { 0, 0, 0 }, 0, { 4, 4, 1 });
+
+		StagingBuffer2.read(0, TextureReturn, 0, sizeof(TextureData));
+
+		if (memcmp(TextureData, TextureReturn, sizeof(TextureData)) == 0) {
+			*Engine << "Texture Data Matches, Operation Success!\n";
+		}
+		else {
+			*Engine << "Texture Data does NOT Match, Operation Failure!\n";
+		}
+
+		image SecondTexture(Context, TextureCreateInfo, image::format::B8G8R8A8_SRGB, 4, 4);
+
+		//Result = DeviceTexture.transition(image::layout::SHADER_READ_ONLY_OPTIMAL, image::layout::TRANSFER_SRC_OPTIMAL);
+
+		Result = SecondTexture.transition(image::layout::SHADER_READ_ONLY_OPTIMAL, image::layout::TRANSFER_DST_OPTIMAL);
+
+		Result = SecondTexture.copy({ 0, 0, 0 }, 0, DeviceTexture, { 0, 0, 0 }, 0, { 4, 4, 1 });
+
+		Result = DeviceTexture.transition(image::layout::TRANSFER_SRC_OPTIMAL, image::layout::SHADER_READ_ONLY_OPTIMAL);
+
+		Result = SecondTexture.transition(image::layout::TRANSFER_DST_OPTIMAL, image::layout::TRANSFER_SRC_OPTIMAL);
+
+		memset(TextureReturn, 0x00, sizeof(TextureData));
+
+		Result = SecondTexture.read({ 0, 0, 0 }, 0, TextureReturn, 0, { 4, 4, 1 });
+
+		if (memcmp(TextureData, TextureReturn, sizeof(TextureData)) == 0) {
 			*Engine << "Texture Data Matches, Operation Success!\n";
 		}
 		else {

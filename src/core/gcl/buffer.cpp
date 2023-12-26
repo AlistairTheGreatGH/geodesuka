@@ -69,12 +69,12 @@ namespace geodesuka::core::gcl {
 
 		// Write data to buffer object.
 		if (aBufferData != NULL) {
-			this->write(aBufferData, 0, 0, aBufferSize);
+			this->write(0, aBufferData, 0, aBufferSize);
 		}
 	}
 
 	buffer::buffer(buffer& aInput) : buffer(aInput.Context, aInput.MemoryType, aInput.CreateInfo.usage, aInput.CreateInfo.size, NULL) {
-		this->copy(aInput, 0, 0, aInput.CreateInfo.size);
+		this->copy(0, aInput, 0, aInput.CreateInfo.size);
 	}
 
 	buffer::buffer(buffer&& aInput) noexcept {
@@ -100,7 +100,7 @@ namespace geodesuka::core::gcl {
 
 		*this = buffer(aRhs.Context, aRhs.MemoryType, aRhs.CreateInfo.usage, aRhs.CreateInfo.size, NULL);
 
-		Result = this->copy(aRhs, 0, 0, aRhs.CreateInfo.size);
+		Result = this->copy(0, aRhs, 0, aRhs.CreateInfo.size);
 
 		return *this;
 	}
@@ -116,7 +116,7 @@ namespace geodesuka::core::gcl {
 		return *this;
 	}
 
-	void buffer::copy(VkCommandBuffer aCommandBuffer, buffer& aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize) {
+	void buffer::copy(VkCommandBuffer aCommandBuffer, size_t aDestinationOffset, buffer& aSourceData, size_t aSourceOffset, size_t aRegionSize) {
 		VkBufferCopy Region{};
 		Region.srcOffset		= aSourceOffset;
 		Region.dstOffset		= aDestinationOffset;
@@ -130,9 +130,16 @@ namespace geodesuka::core::gcl {
 		vkCmdCopyBuffer(aCommandBuffer, aSourceData.Handle, this->Handle, aRegionList.size(), aRegionList.data());
 	}
 
-	void buffer::copy(VkCommandBuffer aCommandBuffer, image& aSourceData, VkBufferImageCopy aRegion) {
-		std::vector<VkBufferImageCopy> RegionList;
-		RegionList.push_back(aRegion);
+	void buffer::copy(VkCommandBuffer aCommandBuffer, size_t aDestinationOffset, image& aSourceData, VkOffset3D aSourceOffset, uint32_t aSourceArrayLayer, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount) {
+		VkBufferImageCopy Region {};
+		Region.bufferOffset						= aDestinationOffset;
+		Region.bufferRowLength					= 0;
+		Region.bufferImageHeight				= 0;
+		Region.imageSubresource.aspectMask		= image::aspect_flag(aSourceData.CreateInfo.format);
+		Region.imageSubresource.mipLevel		= 0;
+		Region.imageSubresource.baseArrayLayer	= aSourceArrayLayer;
+		Region.imageSubresource.layerCount		= std::min(aArrayLayerCount, aSourceData.CreateInfo.arrayLayers - aSourceArrayLayer);
+		std::vector<VkBufferImageCopy> RegionList = { Region };
 		this->copy(aCommandBuffer, aSourceData, RegionList);
 	}
 
@@ -145,7 +152,7 @@ namespace geodesuka::core::gcl {
 		);
 	}
 	
-	VkResult buffer::copy(buffer& aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize) {
+	VkResult buffer::copy(size_t aDestinationOffset, buffer& aSourceData, size_t aSourceOffset, size_t aRegionSize) {
 		VkBufferCopy Region{};
 		Region.srcOffset		= aSourceOffset;
 		Region.dstOffset		= aDestinationOffset;
@@ -166,9 +173,18 @@ namespace geodesuka::core::gcl {
 		return Result;
 	}
 
-	VkResult buffer::copy(image& aSourceData, VkBufferImageCopy aRegion) {
-		std::vector<VkBufferImageCopy> RegionList;
-		RegionList.push_back(aRegion);
+	VkResult buffer::copy(size_t aDestinationOffset, image& aSourceData, VkOffset3D aSourceOffset, uint32_t aSourceArrayLayer, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount) {
+		VkBufferImageCopy Region{};
+		Region.bufferOffset						= aDestinationOffset;
+		Region.bufferRowLength					= 0;
+		Region.bufferImageHeight				= 0;
+		Region.imageSubresource.aspectMask		= image::aspect_flag(aSourceData.CreateInfo.format);
+		Region.imageSubresource.mipLevel		= 0;
+		Region.imageSubresource.baseArrayLayer	= aSourceArrayLayer;
+		Region.imageSubresource.layerCount		= std::min(aArrayLayerCount, aSourceData.CreateInfo.arrayLayers - aSourceArrayLayer);
+		Region.imageOffset 						= aSourceOffset;
+		Region.imageExtent 						= aRegionExtent;
+		std::vector<VkBufferImageCopy> RegionList = { Region };
 		return this->copy(aSourceData, RegionList);
 	}
 
@@ -183,7 +199,7 @@ namespace geodesuka::core::gcl {
 		return Result;
 	}
 
-	VkResult buffer::write(void* aSourceData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize) {
+	VkResult buffer::write(size_t aDestinationOffset, void* aSourceData, size_t aSourceOffset, size_t aRegionSize) {
 		std::vector<VkBufferCopy> RegionList;
 		VkBufferCopy Region{ aSourceOffset, aDestinationOffset, aRegionSize };
 		RegionList.push_back(Region);
@@ -231,10 +247,10 @@ namespace geodesuka::core::gcl {
 					size_t ChunkSize = std::clamp(Remainder, (size_t)0, StagingBufferSize);
 
 					// Write data to staging buffer, if less than ChunkSize, then we are done.
-					StagingBuffer.write(aSourceData, aRegionList[i].srcOffset + ChunkOffset, 0, ChunkSize);
+					Result = StagingBuffer.write(0, aSourceData, aRegionList[i].srcOffset + ChunkOffset, ChunkSize);
 
 					// Execute transfer operation.
-					this->copy(StagingBuffer, 0, aRegionList[i].dstOffset + ChunkOffset, ChunkSize);
+					Result = this->copy(aRegionList[i].dstOffset + ChunkOffset, StagingBuffer, 0, ChunkSize);
 
 					// Recalculate remaining data to send.
 					Remainder -= ChunkSize;
@@ -247,7 +263,7 @@ namespace geodesuka::core::gcl {
 		return Result;
 	}
 
-	VkResult buffer::read(void* aDestinationData, size_t aSourceOffset, size_t aDestinationOffset, size_t aRegionSize) {
+	VkResult buffer::read(size_t aSourceOffset, void* aDestinationData, size_t aDestinationOffset, size_t aRegionSize) {
 		std::vector<VkBufferCopy> RegionList;
 		VkBufferCopy Region{ aSourceOffset, aDestinationOffset, aRegionSize };
 		RegionList.push_back(Region);
@@ -277,7 +293,7 @@ namespace geodesuka::core::gcl {
 			buffer StagingBuffer(
 				Context,
 				device::memory::HOST_VISIBLE | device::memory::HOST_COHERENT,
-				buffer::TRANSFER_SRC,
+				buffer::TRANSFER_DST,
 				StagingBufferSize
 			);
 
@@ -294,10 +310,10 @@ namespace geodesuka::core::gcl {
 					size_t ChunkSize = std::clamp(Remainder, (size_t)0, StagingBufferSize);
 
 					// Copy *this into staging buffer.
-					StagingBuffer.copy(*this, aRegionList[i].srcOffset + ChunkOffset, 0, ChunkSize);
+					StagingBuffer.copy(0, *this, aRegionList[i].srcOffset + ChunkOffset, ChunkSize);
 
 					// Read staging buffer and copy into host memory aDestination Data.
-					StagingBuffer.read(aDestinationData, 0, aRegionList[i].dstOffset + ChunkOffset, ChunkSize);
+					StagingBuffer.read(0, aDestinationData, aRegionList[i].dstOffset + ChunkOffset, ChunkSize);
 
 					// Recalculate remaining data to send.
 					Remainder -= ChunkSize;
