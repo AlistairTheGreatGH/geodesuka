@@ -3,6 +3,7 @@
 #define GEODESUKA_CORE_GCL_CONTEXT_H
 
 #include <vector>
+#include <map>
 #include <atomic>
 #include <mutex>
 
@@ -75,23 +76,24 @@ namespace geodesuka::core::gcl {
 
 		// --------------- Execution --------------- //
 		
-		VkResult wait(VkFence aFence, VkBool32 aWaitOnAll = VK_TRUE);
+		VkResult wait(VkFence aFence);
 		VkResult wait(util::list<VkFence> aFenceList, VkBool32 aWaitOnAll = VK_TRUE);
+		VkResult wait(std::vector<VkFence> aFenceList, VkBool32 aWaitOnAll = VK_TRUE);
+		VkResult reset(std::vector<VkFence> aFenceList);
+		VkResult wait_and_reset(std::vector<VkFence> aFenceList, VkBool32 aWaitOnAll = VK_TRUE);
 		
 		VkResult execute(device::operation aDeviceOperation, VkCommandBuffer aCommandBuffer, VkFence aFence);
 		VkResult execute(device::operation aDeviceOperation, const command_list& aCommandList, VkFence aFence);
 		VkResult execute(device::operation aDeviceOperation, const std::vector<gcl::command_list>& aCommandBatch, VkFence aFence);
 		VkResult execute(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList, VkFence aFence);
 		VkResult execute(const std::vector<VkPresentInfoKHR>& aPresentationList);
+		VkResult execute(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList, const std::vector<VkPresentInfoKHR>& aPresentationList, VkFence aFence);
 
 		VkResult execute_and_wait(device::operation aDeviceOperation, VkCommandBuffer aCommandBuffer);
 		VkResult execute_and_wait(device::operation aDeviceOperation, const command_list& aCommandList);
 		VkResult execute_and_wait(device::operation aDeviceOperation, const std::vector<gcl::command_list>& aCommandBatch);
 		VkResult execute_and_wait(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList);
 		VkResult execute_and_wait(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList, const std::vector<VkPresentInfoKHR>& aPresentationList);
-
-		// Real execution
-		VkResult execute(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList, const std::vector<VkPresentInfoKHR>& aPresentationList, VkFence aFence);
 
 		bool available(device::operation aOperation);
 		int qfi(device::operation aOperation);
@@ -105,29 +107,12 @@ namespace geodesuka::core::gcl {
 
 	private:
 
-		struct queue_family {
-			std::mutex*				Mutex;
-			std::vector<float>		Priority;
-			std::vector<VkQueue>	Handle;
-			queue_family(device::qfp aProperties);
-			queue_family(const queue_family& aInput);
-			queue_family(queue_family&& aInput) noexcept;
-			~queue_family();
-			VkQueue& operator[](size_t aIndex);
-			queue_family& operator=(const queue_family& aRhs);
-			queue_family& operator=(queue_family&& aRhs) noexcept;
-			size_t count() const;
-		};
-
 		// -------------------- Engine Metadata -------------------- //
 		
 		// This data is used for engine execution.
 		std::mutex 						ExecutionMutex;
-		VkFence 						ExecutionFence[3];
-		std::vector<VkSubmitInfo> 		BackBatch[3];
-		std::vector<VkPresentInfoKHR>	BackPresentBatch;
-		std::vector<VkSubmitInfo> 		Submission[3];
-		std::vector<VkPresentInfoKHR>	Presentation;
+		std::vector<VkFence> 			ExecutionFence;
+		std::vector<bool> 				ExecutionInFlight;
 
 		// -------------------- Context Data -------------------- //
 
@@ -135,12 +120,15 @@ namespace geodesuka::core::gcl {
 		std::mutex 									Mutex;
 		engine* 									Engine;
 		device* 									Device;
-		std::vector<int> 							QFI;					// Queue Family Index List
-		std::vector<int> 							UQFI;					// Unique Queue Family Index List
-		VkPhysicalDeviceFeatures 					Features;
-		std::vector<VkDeviceQueueCreateInfo>		QueueCreateInfo;
-		VkDeviceCreateInfo 							CreateInfo{};
+		std::vector<int> 							QFI;
+		std::vector<int> 							UQFI;
+		std::map<int, int> 							RQC;
+		std::map<int, int> 							DQC;
+		std::vector<std::vector<float>> 			QP;
+		std::vector<VkDeviceQueueCreateInfo>		QCI;
+		VkDeviceCreateInfo 							CI;
 		VkDevice 									Handle;
+		std::map<int, std::vector<VkQueue>> 		Queue;
 
 		// --------------- Managed Resources --------------- //
 		
@@ -149,8 +137,7 @@ namespace geodesuka::core::gcl {
 		util::list<VkFence> 						Fence;
 		util::list<VkDeviceMemory> 					Memory;
 
-		std::vector<queue_family> 					Queue;
-
+		int qfo(device::operation aOperation);
 		int uqfi_index(device::operation aOperation);
 
 	};

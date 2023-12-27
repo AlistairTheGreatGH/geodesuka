@@ -85,6 +85,8 @@ namespace geodesuka::core::gcl {
 			this->QueueFamily[i].QueueCount = QueueFamilyProperties[i].queueCount;
 		}
 
+		vkGetPhysicalDeviceFeatures(this->Handle, &this->Features);
+
 		/*
 		vkGetPhysicalDeviceProperties(this->Handle, &this->Properties);
 		vkGetPhysicalDeviceFeatures(this->Handle, &this->Features);
@@ -317,6 +319,10 @@ namespace geodesuka::core::gcl {
 			}
 		}
 		return LOCI;
+	}
+
+	int device::qfc(int aQFI) const {
+		return this->QueueFamily[aQFI].QueueCount;
 	}
 
 	VkInstance device::inst() {

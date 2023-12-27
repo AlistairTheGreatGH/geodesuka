@@ -10,18 +10,23 @@
 
 #include <GLFW/glfw3.h>
 
+
 namespace geodesuka::core::gcl {
 
 	using namespace util;
 
+	static std::vector<device::operation> DesiredOperations = {
+		device::operation::TRANSFER,
+		device::operation::COMPUTE,
+		device::operation::GRAPHICS,
+		device::operation::GRAPHICS_AND_COMPUTE,
+		device::operation::PRESENT
+	};
+
 	context::context(engine* aEngine, device* aDevice, util::list<const char*> aLayer, util::list<const char*> aExtension) {
 		VkResult Result = VK_SUCCESS;
-
-		// List of operations.
-		// Check for support of required extensions requested i
-		// 1: Check for extensions.
-		// 2: Queue Create Info.
-		// 3: Create Logical Device.
+		//std::vector<device::qfp> QueueFamilyProperty = aDevice->get_queue_family_properties();
+		//float QueuePriority = 1.0f;
 
 		if ((aEngine == nullptr) || (aDevice == nullptr)) return;
 
@@ -29,15 +34,11 @@ namespace geodesuka::core::gcl {
 		this->Device = aDevice;
 
 		// Generate a list of supported operations.
-		this->QFI = std::vector<int>(5);
-		this->QFI[0] = this->Device->qfi(device::operation::TRANSFER);
-		this->QFI[1] = this->Device->qfi(device::operation::COMPUTE);
-		this->QFI[2] = this->Device->qfi(device::operation::GRAPHICS);
-		this->QFI[3] = this->Device->qfi(device::operation::GRAPHICS_AND_COMPUTE);
-		this->QFI[4] = this->Device->qfi(device::operation::PRESENT);
+		this->QFI = std::vector<int>(DesiredOperations.size());
+		for (size_t i = 0; i < DesiredOperations.size(); i++) {
+			this->QFI[i] = this->Device->qfi(DesiredOperations[i]);
+		}
 
-		// Compose a set of Unique Queue Family Indices (UQFI), for Device Creation.
-		// Checks if a QFI already exists in the list, if it doesn't, it adds it.
 		for (int i : QFI) {
 			if (i == -1) continue;
 			if (UQFI.size() != 0) {
@@ -54,45 +55,55 @@ namespace geodesuka::core::gcl {
 			}
 		}
 
-		std::vector<device::qfp> QueueFamilyProperty = this->Device->get_queue_family_properties();
+		for (int i : UQFI) {
+			// Count requested queue count.
+			RQC[i] = 0;
+			for (int j : QFI) {
+				if (i == j) {
+					RQC[i]++;
+				}
+			}
+			// Get Queue Family Queue Count.
+			DQC[i] = this->Device->qfc(i);
+		}
 
 		for (int i : UQFI) {
-			Queue.emplace_back(QueueFamilyProperty[i]);
+			QP[i].resize(std::min(RQC[i], DQC[i]));
+			for (size_t j = 0; j < QP.size(); j++) {
+				QP[i][j] = 1.0f;
+			}
 		}
 
+		QCI.resize(UQFI.size());
 		for (size_t i = 0; i < UQFI.size(); i++) {
-			VkDeviceQueueCreateInfo NewQueueCreateInfo{};
-			NewQueueCreateInfo.sType				= VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-			NewQueueCreateInfo.pNext				= NULL;
-			NewQueueCreateInfo.flags				= 0;
-			NewQueueCreateInfo.queueFamilyIndex		= UQFI[i];
-			NewQueueCreateInfo.queueCount			= Queue[i].Priority.size();
-			NewQueueCreateInfo.pQueuePriorities		= Queue[i].Priority.data();
-			QueueCreateInfo.push_back(NewQueueCreateInfo);
+			QCI[i].sType				= VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+			QCI[i].pNext				= NULL;
+			QCI[i].flags				= 0;
+			QCI[i].queueFamilyIndex		= UQFI[i];
+			QCI[i].queueCount			= QP[UQFI[i]].size();
+			QCI[i].pQueuePriorities		= QP[UQFI[i]].data();
 		}
-
-		this->Features = Device->get_features();
 
 		// Load VkDevice Create Info.
-		CreateInfo.sType						= VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-		CreateInfo.pNext						= NULL;
-		CreateInfo.flags						= 0;
-		CreateInfo.queueCreateInfoCount			= QueueCreateInfo.size();
-		CreateInfo.pQueueCreateInfos			= QueueCreateInfo.data();
-		CreateInfo.enabledLayerCount			= aLayer.count();
-		CreateInfo.ppEnabledLayerNames			= aLayer.Handle.data();
+		CI.sType						= VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+		CI.pNext						= NULL;
+		CI.flags						= 0;
+		CI.queueCreateInfoCount			= QCI.size();
+		CI.pQueueCreateInfos			= QCI.data();
+		CI.enabledLayerCount			= aLayer.count();
+		CI.ppEnabledLayerNames			= aLayer.Handle.data();
 		if (Device->is_extension_list_supported(aExtension.Handle)) {
-			CreateInfo.enabledExtensionCount		= aExtension.count();
-			CreateInfo.ppEnabledExtensionNames		= aExtension.Handle.data();
+			CI.enabledExtensionCount		= aExtension.count();
+			CI.ppEnabledExtensionNames		= aExtension.Handle.data();
 		}
 		else {
-			CreateInfo.enabledExtensionCount		= 0;
-			CreateInfo.ppEnabledExtensionNames		= NULL;
+			CI.enabledExtensionCount		= 0;
+			CI.ppEnabledExtensionNames		= NULL;
 		}
-		CreateInfo.pEnabledFeatures				= &this->Features;
+		CI.pEnabledFeatures				= &aDevice->Features;
 
 		// Create Vulkan Logical Device.
-		Result = vkCreateDevice(Device->handle(), &this->CreateInfo, NULL, &this->Handle);
+		Result = vkCreateDevice(Device->handle(), &this->CI, NULL, &this->Handle);
 		if (Result == VK_SUCCESS) {
 			*Engine << log::message(log::INFO, log::SUCCESS, "Context Creation", log::GEODESUKA, "context", "instance", "Device Context Creation Successful!");
 		}
@@ -101,9 +112,9 @@ namespace geodesuka::core::gcl {
 		}
 
 		// Get all create queues
-		for (size_t i = 0; i < Queue.size(); i++) {
-			for (size_t j = 0; j < Queue[i].count(); j++) {
-				vkGetDeviceQueue(Handle, UQFI[i], j, &Queue[i][j]);
+		for (int i : UQFI) {
+			for (int j = 0; j < RQC[i]; j++) {
+				vkGetDeviceQueue(Handle, i, j % DQC[i], &Queue[i][j]);
 			}
 		}
 
@@ -112,9 +123,15 @@ namespace geodesuka::core::gcl {
 		this->CommandPool[2] = new command_pool(this, 0, device::operation::GRAPHICS);
 		this->CommandPool[3] = new command_pool(this, 0, device::operation::GRAPHICS_AND_COMPUTE);
 
-		ExecutionFence[0] = this->create_fence();
-		ExecutionFence[1] = this->create_fence();
-		ExecutionFence[2] = this->create_fence();
+		this->ExecutionFence.push_back(this->create_fence());
+		this->ExecutionFence.push_back(this->create_fence());
+		this->ExecutionFence.push_back(this->create_fence());
+
+		this->ExecutionInFlight.push_back(false);
+		this->ExecutionInFlight.push_back(false);
+		this->ExecutionInFlight.push_back(false);
+
+		this->Engine->Context |= this;
 
 	}
 
@@ -341,12 +358,28 @@ namespace geodesuka::core::gcl {
 		}
 	}
 
-	VkResult context::wait(VkFence aFence, VkBool32 aWaitOnAll) {
-		return vkWaitForFences(this->Handle, 1, &aFence, aWaitOnAll, UINT64_MAX);
+	VkResult context::wait(VkFence aFence) {
+		std::vector<VkFence> FenceList = { aFence };
+		return this->wait(FenceList, true);
 	}
 
 	VkResult context::wait(util::list<VkFence> aFenceList, VkBool32 aWaitOnAll) {
-		return vkWaitForFences(this->Handle, aFenceList.count(), aFenceList.Handle.data(), aWaitOnAll, UINT64_MAX);
+		return this->wait(aFenceList.Handle, aWaitOnAll);
+	}
+
+	VkResult context::wait(std::vector<VkFence> aFenceList, VkBool32 aWaitOnAll) {
+		return vkWaitForFences(this->Handle, aFenceList.size(), aFenceList.data(), aWaitOnAll, UINT64_MAX);
+	}
+
+	VkResult context::reset(std::vector<VkFence> aFenceList) {
+		return vkResetFences(this->Handle, aFenceList.size(), aFenceList.data());
+	}
+
+	VkResult context::wait_and_reset(std::vector<VkFence> aFenceList, VkBool32 aWaitOnAll) {
+		VkResult Result = VK_SUCCESS;
+		Result = this->wait(aFenceList, aWaitOnAll);
+		Result = this->reset(aFenceList);
+		return Result;
 	}
 
 	VkResult context::execute(device::operation aDeviceOperation, VkCommandBuffer aCommandBuffer, VkFence aFence) {
@@ -387,6 +420,37 @@ namespace geodesuka::core::gcl {
 		return this->execute(device::operation::PRESENT, std::vector<VkSubmitInfo>(0), aPresentationList, VK_NULL_HANDLE);
 	}
 
+	VkResult context::execute(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList, const std::vector<VkPresentInfoKHR>& aPresentationList, VkFence aFence) {
+		VkResult Result = VK_SUCCESS;
+
+		if ((aSubmissionList.size() == 0) && (aPresentationList.size() == 0)) return Result;
+
+		int i = this->Device->qfi(aDeviceOperation);
+		int j = RQC[i] % DQC[i];
+
+		// Queue Operation Not supported.
+		if (i == -1) return VK_ERROR_FEATURE_NOT_PRESENT;
+		
+		switch (aDeviceOperation) {
+		case device::operation::TRANSFER:
+		case device::operation::COMPUTE:
+		case device::operation::GRAPHICS:
+		case device::operation::GRAPHICS_AND_COMPUTE:
+			Result = vkQueueSubmit(Queue[i][j], aSubmissionList.size(), aSubmissionList.data(), aFence);
+			break;
+		case device::operation::PRESENT:
+			for (size_t k = 0; k < aPresentationList.size(); k++) {
+				Result = vkQueuePresentKHR(Queue[i][j], &aPresentationList[k]);
+			}
+			break;
+		default:
+			Result = VK_ERROR_FEATURE_NOT_PRESENT;
+			break;
+		}
+
+		return Result;
+	}
+
 	VkResult context::execute_and_wait(device::operation aDeviceOperation, VkCommandBuffer aCommandBuffer) {
 		VkSubmitInfo SubmitInfo{};
 		SubmitInfo.sType				= VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -425,41 +489,6 @@ namespace geodesuka::core::gcl {
 		Result = this->execute(aDeviceOperation, aSubmissionList, aPresentationList, Fence);
 		Result = this->wait(Fence);
 		this->destroy_fence(Fence);
-		return Result;
-	}
-
-	VkResult context::execute(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList, const std::vector<VkPresentInfoKHR>& aPresentationList, VkFence aFence) {
-		VkResult Result = VK_SUCCESS;
-
-		int i = this->uqfi_index(aDeviceOperation);
-		int j = 0;
-
-		// Queue Operation Not supported.
-		if (i == -1) return VK_ERROR_FEATURE_NOT_PRESENT;
-
-		while (true) {
-			if (Queue[i].Mutex[j].try_lock()) {
-				switch (aDeviceOperation) {
-				case device::operation::TRANSFER:
-				case device::operation::COMPUTE:
-				case device::operation::GRAPHICS:
-				case device::operation::GRAPHICS_AND_COMPUTE:
-					Result = vkQueueSubmit(Queue[i][j], aSubmissionList.size(), aSubmissionList.data(), aFence);
-					break;
-				case device::operation::PRESENT:
-					for (size_t k = 0; k < aPresentationList.size(); k++) {
-						Result = vkQueuePresentKHR(Queue[i][j], &aPresentationList[k]);
-					}
-					break;
-				default:
-					Result = VK_ERROR_FEATURE_NOT_PRESENT;
-					break;
-				}
-				Queue[i].Mutex[j].unlock();
-				break;
-			}
-			j = ((j == (Queue[i].count() - 1)) ? 0 : (j + 1));
-		}
 		return Result;
 	}
 
@@ -504,53 +533,10 @@ namespace geodesuka::core::gcl {
 		return this->Handle;
 	}
 
-	context::queue_family::queue_family(device::qfp aProperties) {
-		Mutex = new std::mutex[aProperties.QueueCount];
-		for (uint32_t i = 0; i < aProperties.QueueCount; i++) {
-			this->Priority.push_back(1.0f);
-			this->Handle.push_back(VK_NULL_HANDLE);
-		}
-	}
-
-	context::queue_family::queue_family(const queue_family& aInput) {
-		*this = aInput;
-	}
-
-	context::queue_family::queue_family(queue_family&& aInput) noexcept {
-		this->Mutex		= aInput.Mutex;
-		aInput.Mutex	= nullptr;
-		this->Priority	= aInput.Priority;
-		this->Handle	= aInput.Handle;
-	}
-
-	context::queue_family::~queue_family() {
-		delete[] this->Mutex;
-		this->Mutex = nullptr;
-	}
-
-	VkQueue& context::queue_family::operator[](size_t aIndex) {
-		return this->Handle[aIndex];
-	}
-
-	context::queue_family& context::queue_family::operator=(const queue_family& aRhs) {
-		if (this == &aRhs) return *this;
-		delete[] this->Mutex;
-		this->Mutex = new std::mutex[aRhs.Handle.size()];
-		this->Priority = aRhs.Priority;
-		this->Handle = aRhs.Handle;
-		return *this;
-	}
-
-	context::queue_family& context::queue_family::operator=(queue_family&& aRhs) noexcept {
-		this->Mutex		= aRhs.Mutex;
-		aRhs.Mutex		= nullptr;
-		this->Priority	= aRhs.Priority;
-		this->Handle	= aRhs.Handle;
-		return *this;
-	}
-
-	size_t context::queue_family::count() const {
-		return this->Handle.size();
+	int context::qfo(device::operation aOperation) {
+		int Offset = 0;
+		//for (int i : )
+		return Offset;
 	}
 
 	int context::uqfi_index(device::operation aOperation) {

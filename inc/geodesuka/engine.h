@@ -6,6 +6,7 @@
 
 /* --------------- Standard C++ Libraries --------------- */
 #include <vector>
+#include <map>
 #include <chrono>
 
 #include <thread>
@@ -181,15 +182,6 @@ namespace geodesuka {
 		void render(core::app* aApp);		// Thread honors frame rates of respective targets.
 		//void audio(core::app* aApp);		// Thread Handles audio streams.
 		void terminal(core::app* aApp);		// Thread handles terminal input to the engine.
-
-		VkResult execute_transfer_and_compute_operations(
-			const std::vector<std::vector<VkSubmitInfo>>& aTransferOperations, 
-			const std::vector<std::vector<VkSubmitInfo>>& aComputeOperations
-		);
-		VkResult execute_graphics_and_compute_operations(
-			const std::vector<std::vector<VkSubmitInfo>>& aGraphicsAndCompute, 
-			const std::vector<std::vector<VkPresentInfoKHR>>& aPresentation
-		);
 
 	};
 

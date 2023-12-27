@@ -12,25 +12,6 @@ namespace geodesuka::core {
 		// Generate a list of uniquely owned objects by stage.
 		object_list OwnedObject = Object.gather_by(this);
 
-		State = DESTRUCTION;
-
-		//if ((Engine != nullptr) ? (Engine->State != engine::state::DESTRUCTION) : false) {
-		//	// Suspend all other shared threads.
-		//	Engine->ThreadController.suspend_all();
-
-		//	// I: Remove Stage from Engine.State
-		//	Engine->Stage -= this;
-
-		//	// II: Iterate through all engine stages to remove owned objects
-		//	// from other stages.
-		//	for (int i = 0; i < Engine->Stage.count(); i++) {
-		//		Engine->Stage[i]->Object -= OwnedObject;
-		//	}
-
-		//	// Resume all engine threads.
-		//	Engine->ThreadController.resume_all();
-		//}
-
 		// Deleted owned objects
 		for (int i = 0; i < OwnedObject.count(); i++) {
 			delete OwnedObject[i];
@@ -42,20 +23,7 @@ namespace geodesuka::core {
 
 	// Base constructor.
 	stage_t::stage_t(engine* aEngine, gcl::context* aContext) {
-
-		State					= state::CREATION;
 		Context					= aContext;
-
-		//if ((Engine != nullptr) ? (Engine->State != engine::state::DESTRUCTION) : false) {
-		//	// Suspend all other shared threads.
-		//	Engine->ThreadController.suspend_all();
-
-		//	// Add stage to the engine.
-		//	Engine->Stage |= this;
-
-		//	// Resume all engine threads.
-		//	Engine->ThreadController.resume_all();
-		//}
 	}
 
 	void stage_t::generate_render_operations() {

@@ -99,6 +99,12 @@ namespace geodesuka::core {
 
 	protected:
 
+		enum motion {
+			STATIC,
+			DYNAMIC,
+			KINEMATIC,
+		};
+
 		struct object_ubo {
 			math::mat4<float> Translation;
 			math::mat4<float> Orientation;
@@ -126,9 +132,10 @@ namespace geodesuka::core {
 		math::vec3<float>			DirectionY;			// Up				[Normalized]
 		math::vec3<float>			DirectionZ;			// Forward			[Normalized]
 
+		
+		physics::mesh				CollisionMesh;
 
 		graphics::model*			Model;
-		//physics::mesh 				Mesh;
 
 		VkDescriptorPool			DescriptorPool;
 		gcl::buffer					ObjectUBO;

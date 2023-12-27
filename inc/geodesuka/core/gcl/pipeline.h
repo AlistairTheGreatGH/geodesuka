@@ -130,8 +130,8 @@ namespace geodesuka::core::gcl {
 
 		private:
 
-			shader*												Shader[GCL_RASTERIZER_STAGE_COUNT];
-			glslang::TProgram*									ProgramHandle;
+			shader*										Shader[GCL_RASTERIZER_STAGE_COUNT];
+			glslang::TProgram*							ProgramHandle;
 			std::vector<uint>							SPIRVByteCode[GCL_RASTERIZER_STAGE_COUNT];
 
 			bool create(uint32_t aShaderCount, shader** aShaderList);

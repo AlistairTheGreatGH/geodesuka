@@ -30,7 +30,7 @@ namespace geodesuka::builtin::app {
 
 	private:
 
-		core::gcl::context* 			Context;		// Device Context which will be used for all graphics and computation operations.
+		core::gcl::context* 			DeviceContext;		// Device Context which will be used for all graphics and computation operations.
 		core::object::system_display* 	Display;		// Primary Display.
 		core::object::system_window* 	Window;			// Main Application Window.
 

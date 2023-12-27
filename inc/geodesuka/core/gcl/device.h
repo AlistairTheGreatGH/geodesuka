@@ -119,6 +119,7 @@ namespace geodesuka::core::gcl {
 		// of different execution queues for a device context. This function will return -1 if this device
 		// does not support the desired operation.
 		int qfi(uint aOperation) const;
+		int qfc(int aQFI) const;
 
 		// ----- Handles ----- //
 
@@ -131,7 +132,9 @@ namespace geodesuka::core::gcl {
 
 		VkInstance 								ParentInstance;
 		VkPhysicalDevice 						Handle;
+		VkPhysicalDeviceFeatures 				Features;
 		std::vector<qfp> 						QueueFamily;
+
 
 		// Internally calculates the number of operations in qfi operation.
 		uint operation_count(uint aOperation) const;

@@ -73,74 +73,80 @@ namespace geodesuka::core {
 
 	}
 
-	std::vector<std::vector<VkSubmitInfo>> app::gather_transfer_operations() {
-		std::vector<std::vector<VkSubmitInfo>> Transfer(Engine->Context.count());
+	std::map<context*, std::vector<VkSubmitInfo>> app::gather_transfer_operations() {
+		std::map<context*, std::vector<VkSubmitInfo>> Transfer;
+		object_list UniqueObject;
 
-		// Gather all transfer operations from each unique object.
-		object_list Object;
-		for (size_t i = 0; i < Stage.count(); i++) {
-			Object |= Stage[i]->Object;
+		// Collect a list of unique game objects.
+		for (stage_t* Stg : Stage.Handle) {
+			UniqueObject |= Stg->Object;
 		}
 
 		// Gather all transfer operations from each stage.
-		for (size_t i = 0; i < Engine->Context.count(); i++) {
-			for (size_t j = 0; j < this->Stage.count(); j++) {
-				Transfer;
+		for (context* Ctx : Engine->Context.Handle) {
+
+			Transfer[Ctx] = std::vector<VkSubmitInfo>(0);
+
+			// Gather all transfer operations from each unique object.
+			for (object_t* Obj : UniqueObject.Handle) {
+				if (Obj->Context == Ctx) {
+					Transfer[Ctx].push_back(Obj->transfer());
+				}
 			}
+
+			// Gather all transfer operations from each stage.
+			for (stage_t* Stg : Stage.Handle) {
+				if (Stg->Context == Ctx) {
+					Transfer[Ctx].push_back(Stg->transfer());
+				}
+			}
+
 		}
 
 		return Transfer;
 	}
 
-	std::vector<std::vector<VkSubmitInfo>> app::gather_compute_operations() {
-		std::vector<std::vector<VkSubmitInfo>> Compute(Engine->Context.count());
+	std::map<context*, std::vector<VkSubmitInfo>> app::gather_compute_operations() {
+		std::map<context*, std::vector<VkSubmitInfo>> Compute;
+		object_list UniqueObject;
 
-		// Gather all compute operations from each unique object.
+		// Collect a list of unique game objects.
+		for (stage_t* Stg : Stage.Handle) {
+			UniqueObject |= Stg->Object;
+		}
 
 		// Gather all compute operations from each stage.
+		for (context* Ctx : Engine->Context.Handle) {
+
+			Compute[Ctx] = std::vector<VkSubmitInfo>(0);
+
+			// Gather all compute operations from each unique object.
+			for (object_t* Obj : UniqueObject.Handle) {
+				if (Obj->Context == Ctx) {
+					Compute[Ctx].push_back(Obj->compute());
+				}
+			}
+
+			// Gather all compute operations from each stage.
+			for (stage_t* Stg : Stage.Handle) {
+				if (Stg->Context == Ctx) {
+					Compute[Ctx].push_back(Stg->compute());
+				}
+			}
+
+		}
 
 		return Compute;
 	}
 
-	std::vector<std::vector<VkSubmitInfo>> app::gather_graphics_and_compute_operations() {
-		std::vector<std::vector<VkSubmitInfo>> GraphicsAndCompute(Engine->Context.count());
-
-		for (size_t i = 0; i < Engine->Context.count(); i++) {
-			for (size_t j = 0; j < this->Stage.count(); j++) {
-				if (Engine->Context[i] == this->Stage[j]->Context) {
-					std::vector<VkSubmitInfo> Submission = this->Stage[j]->render();
-					size_t Start = GraphicsAndCompute[i].size();
-					GraphicsAndCompute[i].resize(Start + Submission.size());
-					for (size_t k = 0; k < Submission.size(); k++) {
-						GraphicsAndCompute[i][k + Start] = Submission[k];
-					}
-				}
-			}
-		}
-
+	std::map<context*, std::vector<VkSubmitInfo>> app::gather_graphics_and_compute_operations() {
+		std::map<context*, std::vector<VkSubmitInfo>> GraphicsAndCompute;
 		return GraphicsAndCompute;
 	}
 
-	std::vector<std::vector<VkPresentInfoKHR>> app::gather_presentation_operations() {
-		std::vector<std::vector<VkPresentInfoKHR>> Present(Engine->Context.count());
-
-		// Get all presentation operations per system window.
-
+	std::map<context*, std::vector<VkPresentInfoKHR>> app::gather_presentation_operations() {
+		std::map<context*, std::vector<VkPresentInfoKHR>> Present;
 		return Present;
 	}
-
-	//void app::gather_render_operations() {
-	//	// Aggregate all render operations from each stage to each context.
-	//	for (int i = 0; i < Engine->Context.count(); i++) {
-	//		// Go to next context if not ready.
-	//		if (!Engine->Context[i]->EnableProcessing.load()) continue;
-	//		for (int j = 1; j < Stage.count(); j++) {
-	//			// Go to next stage if stage is not ready.
-	//			if ((!this->Stage[j]->State == stage_t::state::READY) && (this->Stage[j]->Engine->Context == Engine->Context[i])) {
-	//				Engine->Context.Handle[i]->BackBatch[2] += this->Stage[j]->render();
-	//			}
-	//		}
-	//	}
-	//}
 
 }

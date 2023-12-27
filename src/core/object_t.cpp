@@ -280,7 +280,7 @@ namespace geodesuka::core {
 
 	VkSubmitInfo object_t::transfer() {
 		VkSubmitInfo TransferBatch{};
-		TransferBatch.sType = VkStructureType::VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		TransferBatch.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		TransferBatch.pNext = NULL;
 		TransferBatch.waitSemaphoreCount = 0;
 		TransferBatch.pWaitSemaphores = NULL;

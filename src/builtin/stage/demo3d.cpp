@@ -12,8 +12,6 @@ namespace geodesuka::builtin::stage {
 		//this->RenderTarget		|= new camera3d(aEngine, aContext, this, "Camera3D", 3, 60.0, math::vec3<float>(0, 0, 0), math::vec2<int>(640, 480));
 
 		//this->Object			|= new object::triangle(Engine, aContext, this, "Triangle");
-
-		this->State				= READY;
 	}
 
 	demo3d::~demo3d() {

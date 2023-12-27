@@ -44,7 +44,6 @@ namespace geodesuka::core {
 
 
 		std::mutex						Mutex;
-		std::atomic<state>				State;
 		gcl::context*					Context;
 		object_list						Object;
 

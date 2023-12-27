@@ -22,7 +22,7 @@ namespace geodesuka::builtin::app {
 	unit_test::unit_test(engine* aEngine) : core::app(aEngine) {
 		// Initialize everything.
 
-		Context = nullptr;
+		DeviceContext = nullptr;
 		TimeStep.store(0.001);
 
 	}
@@ -34,30 +34,32 @@ namespace geodesuka::builtin::app {
 
 	void unit_test::run() {
 
+		// Needed for interaction with WSI.
 		util::list<const char*> Layers;
 		util::list<const char*> Extensions = util::list<const char*>(system_window::RequiredContextExtension.size(), system_window::RequiredContextExtension.data());
 
-		Context = new context(Engine, Engine->PrimaryDevice, Layers, Extensions);
+		// Create device context with required extensions.
+		DeviceContext = new context(Engine, Engine->PrimaryDevice, Layers, Extensions);
 
-		this->full_test();
+		//this->full_test();
 
-		// Setup window properties.
-		system_window::create_info Property;
-		Property.Swapchain.FrameCount			= 3;
-		Property.Swapchain.FrameRate			= 60.0;
-		Property.Swapchain.ColorSpace			= swapchain::colorspace::SRGB_NONLINEAR;
-		Property.Swapchain.ImageUsage			= image::usage::COLOR_ATTACHMENT | image::usage::TRANSFER_SRC | image::usage::TRANSFER_DST;
-		Property.Swapchain.CompositeAlpha		= swapchain::composite::ALPHA_OPAQUE;
-		Property.Swapchain.PresentMode			= swapchain::present_mode::FIFO;
-		Property.Swapchain.Clipped				= true;
-		Property.Swapchain.PixelFormat			= image::format::R8G8B8A8_SRGB;
-		//Property.Title							= "Unit Test";
+		//// Setup window properties.
+		//system_window::create_info Property;
+		//Property.Swapchain.FrameCount			= 3;
+		//Property.Swapchain.FrameRate			= 60.0;
+		//Property.Swapchain.ColorSpace			= swapchain::colorspace::SRGB_NONLINEAR;
+		//Property.Swapchain.ImageUsage			= image::usage::COLOR_ATTACHMENT | image::usage::SAMPLED | image::usage::TRANSFER_SRC | image::usage::TRANSFER_DST;
+		//Property.Swapchain.CompositeAlpha		= swapchain::composite::ALPHA_OPAQUE;
+		//Property.Swapchain.PresentMode			= swapchain::present_mode::FIFO;
+		//Property.Swapchain.Clipped				= true;
+		//Property.Swapchain.PixelFormat			= image::format::R8G8B8A8_SRGB;
+		////Property.Title							= "Unit Test";
 
-		// Application main window.
-		Window = new system_window(Context, Engine->Display[0], "Unit Test", Property, math::vec2<int>(0, 0), math::vec2<int>(640, 480));
+		//// Application main window.
+		//Window = new system_window(DeviceContext, Engine->Display[0], "Unit Test", Property, math::vec2<int>(0, 0), math::vec2<int>(640, 480));
 
-		// Create Compositor Canvas.
-		Compositor = new canvas(Context, Window);
+		//// Create Compositor Canvas.
+		//Compositor = new canvas(DeviceContext, Window);
 
 		// Create Demo3D Stage.
 		//Demo3D = new demo3d(Context);
@@ -69,7 +71,7 @@ namespace geodesuka::builtin::app {
 
 		delete Window;
 
-		delete Context;
+		delete DeviceContext;
 	}
 
 	void unit_test::full_test() {
@@ -319,11 +321,11 @@ namespace geodesuka::builtin::app {
 
 
 			// Unit Test of buffer.h and image.h
-			buffer HostBuffer(Context, HostBufferCI, sizeof(BufferData), BufferData);
+			buffer HostBuffer(DeviceContext, HostBufferCI, sizeof(BufferData), BufferData);
 
-			buffer DeviceBuffer(Context, DeviceBufferCI, sizeof(BufferData));
+			buffer DeviceBuffer(DeviceContext, DeviceBufferCI, sizeof(BufferData));
 
-			buffer ReturnBuffer(Context, HostBufferCI, sizeof(BufferData));
+			buffer ReturnBuffer(DeviceContext, HostBufferCI, sizeof(BufferData));
 
 			// Copy To Device Buffer
 			Result = DeviceBuffer.copy(0, HostBuffer, 0, sizeof(BufferData));
@@ -370,12 +372,12 @@ namespace geodesuka::builtin::app {
 				0, 0, 0, 0
 			};
 
-			buffer StagingBuffer(Context, HostBufferCI, sizeof(TextureData), TextureData);
+			buffer StagingBuffer(DeviceContext, HostBufferCI, sizeof(TextureData), TextureData);
 
-			buffer StagingBuffer2(Context, HostBufferCI, sizeof(TextureData));
+			buffer StagingBuffer2(DeviceContext, HostBufferCI, sizeof(TextureData));
 
 			// Create Device Texture
-			image Texture(Context, TextureCI, image::format::B8G8R8A8_SRGB, 4, 4);
+			image Texture(DeviceContext, TextureCI, image::format::B8G8R8A8_SRGB, 4, 4);
 
 			Result = Texture.transition(image::layout::SHADER_READ_ONLY_OPTIMAL, image::layout::TRANSFER_DST_OPTIMAL);
 
@@ -394,7 +396,7 @@ namespace geodesuka::builtin::app {
 				*Engine << "Texture Data does NOT Match, Operation Failure!\n";
 			}
 
-			image SecondTexture(Context, TextureCI, image::format::B8G8R8A8_SRGB, 4, 4);
+			image SecondTexture(DeviceContext, TextureCI, image::format::B8G8R8A8_SRGB, 4, 4);
 
 			//Result = DeviceTexture.transition(image::layout::SHADER_READ_ONLY_OPTIMAL, image::layout::TRANSFER_SRC_OPTIMAL);
 

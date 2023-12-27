@@ -47,12 +47,10 @@ namespace geodesuka::core {
 
 		void prerun();
 		void update(double aDeltaTime);
-		std::vector<std::vector<VkSubmitInfo>> gather_transfer_operations();
-		std::vector<std::vector<VkSubmitInfo>> gather_compute_operations();
-		std::vector<std::vector<VkSubmitInfo>> gather_graphics_and_compute_operations();
-		std::vector<std::vector<VkPresentInfoKHR>> gather_presentation_operations();
-
-		void gather_render_operations();
+		std::map<gcl::context*, std::vector<VkSubmitInfo>> gather_transfer_operations();
+		std::map<gcl::context*, std::vector<VkSubmitInfo>> gather_compute_operations();
+		std::map<gcl::context*, std::vector<VkSubmitInfo>> gather_graphics_and_compute_operations();
+		std::map<gcl::context*, std::vector<VkPresentInfoKHR>> gather_presentation_operations();
 
 	};
 

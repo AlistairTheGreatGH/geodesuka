@@ -9,6 +9,7 @@
 
 #include <sstream>
 #include <vector>
+#include <map>
 #include <chrono>
 
 /* --------------- Third Party Libraries --------------- */
@@ -447,8 +448,8 @@ namespace geodesuka {
 	// it runs late the time difference will increase.
 	void engine::update(core::app* aApp) {
 		VkResult Result = VK_SUCCESS;
-		std::vector<std::vector<VkSubmitInfo>> Transfer;
-		std::vector<std::vector<VkSubmitInfo>> Compute;
+		std::map<context*, std::vector<VkSubmitInfo>> Transfer;
+		std::map<context*, std::vector<VkSubmitInfo>> Compute;
 
 		while (ThreadController.cycle(aApp->TimeStep.load())) {
 			double dt = aApp->TimeStep.load();
@@ -466,15 +467,30 @@ namespace geodesuka {
 			// Updates all resources owned by user application.
 			aApp->update(dt);
 
-			//Transfer = aApp->gather_transfer_operations();
+			Transfer = aApp->gather_transfer_operations();
 
-			//Compute = aApp->gather_compute_operations();
+			Compute = aApp->gather_compute_operations();
 
 			aApp->Mutex.unlock();
 
 			// --------------- Per Device Context work is done here --------------- //
 
-			//Result = this->execute_transfer_and_compute_operations(Transfer, Compute);
+			for (context* Ctx : Context.Handle) {
+				// Lock Context for execution.
+				Ctx->ExecutionMutex.lock();
+
+				// Wait for other inflight operations to finish.
+				Result = Ctx->wait_and_reset(Ctx->ExecutionFence);
+
+				// Execute all transfer device operations.
+				Result = Ctx->execute(device::operation::TRANSFER, Transfer[Ctx], Ctx->ExecutionFence[0]);
+
+				// Execute all compute device operations.
+				Result = Ctx->execute(device::operation::COMPUTE, Compute[Ctx], Ctx->ExecutionFence[1]);
+
+				// Unlock device context.
+				Ctx->ExecutionMutex.unlock();
+			}
 
 		}
 
@@ -488,8 +504,8 @@ namespace geodesuka {
 	// and check if a render_target is ready to issue render commands.
 	void engine::render(core::app* aApp) {
 		VkResult Result = VK_SUCCESS;
-		std::vector<std::vector<VkSubmitInfo>> GraphicsAndCompute;
-		std::vector<std::vector<VkPresentInfoKHR>> Presentation;
+		std::map<gcl::context*, std::vector<VkSubmitInfo>> GraphicsAndCompute;
+		std::map<gcl::context*, std::vector<VkPresentInfoKHR>> Presentation;
 
 		this->Log << log::message("engine", log::INFO, log::SUCCESS, "Render Thread");
 
@@ -503,7 +519,26 @@ namespace geodesuka {
 
 			aApp->Mutex.unlock();
 
-			Result = this->execute_graphics_and_compute_operations(GraphicsAndCompute, Presentation);
+			// --------------- Per Device Context work is done here --------------- //
+
+			for (context* Ctx : Context.Handle) {
+				// Lock Context for execution.
+				Ctx->ExecutionMutex.lock();
+
+				// Wait for other inflight operations to finish.
+				for (size_t i = 0; i < 3u; i++) {
+					Result = Ctx->wait_and_reset(Ctx->ExecutionFence);
+				}
+
+				// Execute all transfer device operations.
+				Result = Ctx->execute(device::operation::GRAPHICS_AND_COMPUTE, GraphicsAndCompute[Ctx], Ctx->ExecutionFence[2]);
+
+				// Execute all system window presentation operations.
+				Result = Ctx->execute(Presentation[Ctx]);
+
+				// Unlock device context.
+				Ctx->ExecutionMutex.unlock();
+			}
 
 		}
 
@@ -538,84 +573,84 @@ namespace geodesuka {
 
 	}
 
-	VkResult engine::execute_transfer_and_compute_operations(
-		const std::vector<std::vector<VkSubmitInfo>>& aTransferOperations, 
-		const std::vector<std::vector<VkSubmitInfo>>& aComputeOperations
-	) {
-		VkResult Result = VK_SUCCESS;
+	//VkResult engine::execute_transfer_and_compute_operations(
+	//	const std::map<gcl::context*, std::vector<VkSubmitInfo>>& aTransferOperations, 
+	//	const std::map<gcl::context*, std::vector<VkSubmitInfo>>& aComputeOperations
+	//) {
+	//	VkResult Result = VK_SUCCESS;
 
-		for (size_t i = 0; i < Context.count(); i++) {
+	//	//for (size_t i = 0; i < Context.count(); i++) {
 
-			// Lock Context for execution.
-			Context[i]->ExecutionMutex.lock();
+	//	//	// Lock Context for execution.
+	//	//	Context[i]->ExecutionMutex.lock();
 
-			// Iterate through all workbatches and search (and halt) for inflight operations.
-			for (size_t j = 0; j < 3; j++) {
-				if (Context[i]->Submission[j].size() > 0) {
-					vkWaitForFences(Context[i]->Handle, 1, &Context[i]->ExecutionFence[j], VK_TRUE, UINT64_MAX);
-					vkResetFences(Context[i]->Handle, 1, &Context[i]->ExecutionFence[j]);
-					Context[i]->Submission[j].clear();
-				}
-			}
+	//	//	// Iterate through all workbatches and search (and halt) for inflight operations.
+	//	//	for (size_t j = 0; j < 3; j++) {
+	//	//		if (Context[i]->Submission[j].size() > 0) {
+	//	//			vkWaitForFences(Context[i]->Handle, 1, &Context[i]->ExecutionFence[j], VK_TRUE, UINT64_MAX);
+	//	//			vkResetFences(Context[i]->Handle, 1, &Context[i]->ExecutionFence[j]);
+	//	//			Context[i]->Submission[j].clear();
+	//	//		}
+	//	//	}
 
-			Context[i]->Submission[0] = aTransferOperations[i];
-			Context[i]->Submission[1] = aComputeOperations[i];
+	//	//	Context[i]->Submission[0] = aTransferOperations[i];
+	//	//	Context[i]->Submission[1] = aComputeOperations[i];
 
-			// Submit Current Transfer Workload.
-			if (Context[i]->Submission[0].size() > 0) {
-				Result = Context[i]->execute(device::TRANSFER, Context[i]->Submission[0], Context[i]->ExecutionFence[0]);
-			}
+	//	//	// Submit Current Transfer Workload.
+	//	//	if (Context[i]->Submission[0].size() > 0) {
+	//	//		Result = Context[i]->execute(device::TRANSFER, Context[i]->Submission[0], Context[i]->ExecutionFence[0]);
+	//	//	}
 
-			// Submit Current Compute Workload.
-			if (Context[i]->Submission[1].size() > 0) {
-				Result = Context[i]->execute(device::COMPUTE, Context[i]->Submission[1], Context[i]->ExecutionFence[1]);
-			}
+	//	//	// Submit Current Compute Workload.
+	//	//	if (Context[i]->Submission[1].size() > 0) {
+	//	//		Result = Context[i]->execute(device::COMPUTE, Context[i]->Submission[1], Context[i]->ExecutionFence[1]);
+	//	//	}
 
-			// Release context from execution lock.
-			Context[i]->ExecutionMutex.unlock();
-		}
+	//	//	// Release context from execution lock.
+	//	//	Context[i]->ExecutionMutex.unlock();
+	//	//}
 
-		return Result;
-	}
+	//	return Result;
+	//}
 
-	VkResult engine::execute_graphics_and_compute_operations(
-		const std::vector<std::vector<VkSubmitInfo>>& aGraphicsAndCompute, 
-		const std::vector<std::vector<VkPresentInfoKHR>>& aPresentation
-	) {
-		VkResult Result = VK_SUCCESS;
+	//VkResult engine::execute_graphics_and_compute_operations(
+	//	const std::map<gcl::context*, std::vector<VkSubmitInfo>>& aGraphicsAndCompute, 
+	//	const std::map<gcl::context*, std::vector<VkPresentInfoKHR>>& aPresentation
+	//) {
+	//	VkResult Result = VK_SUCCESS;
 
-		for (size_t i = 0; i < Context.count(); i++) {
+	//	//for (size_t i = 0; i < Context.count(); i++) {
 
-			// Lock Context for execution.
-			Context[i]->ExecutionMutex.lock();
+	//	//	// Lock Context for execution.
+	//	//	Context[i]->ExecutionMutex.lock();
 
-			// Iterate through all workbatches and search (and halt) for inflight operations.
-			for (size_t j = 0; j < 3; j++) {
-				if (Context[i]->Submission[j].size() > 0) {
-					vkWaitForFences(Context[i]->Handle, 1, &Context[i]->ExecutionFence[j], VK_TRUE, UINT64_MAX);
-					vkResetFences(Context[i]->Handle, 1, &Context[i]->ExecutionFence[j]);
-					Context[i]->Submission[j].clear();
-				}
-			}
+	//	//	// Iterate through all workbatches and search (and halt) for inflight operations.
+	//	//	for (size_t j = 0; j < 3; j++) {
+	//	//		if (Context[i]->Submission[j].size() > 0) {
+	//	//			vkWaitForFences(Context[i]->Handle, 1, &Context[i]->ExecutionFence[j], VK_TRUE, UINT64_MAX);
+	//	//			vkResetFences(Context[i]->Handle, 1, &Context[i]->ExecutionFence[j]);
+	//	//			Context[i]->Submission[j].clear();
+	//	//		}
+	//	//	}
 
-			Context[i]->Submission[2] = aGraphicsAndCompute[i];
-			Context[i]->Presentation = aPresentation[i];
+	//	//	Context[i]->Submission[2] = aGraphicsAndCompute[i];
+	//	//	Context[i]->Presentation = aPresentation[i];
 
-			// Submit Current Graphics & Compute Workloads.
-			if (Context[i]->Submission[2].size() > 0) {
-				Result = Context[i]->execute(device::GRAPHICS_AND_COMPUTE, Context[i]->Submission[2], Context[i]->ExecutionFence[2]);
-			}
+	//	//	// Submit Current Graphics & Compute Workloads.
+	//	//	if (Context[i]->Submission[2].size() > 0) {
+	//	//		Result = Context[i]->execute(device::GRAPHICS_AND_COMPUTE, Context[i]->Submission[2], Context[i]->ExecutionFence[2]);
+	//	//	}
 
-			// Submit All Presentation Commands. (Note: this should not be very often unless lots of system_windows)
-			if (Context[i]->Presentation.size() > 0) {
-				Result = Context[i]->execute(Context[i]->Presentation);
-			}
+	//	//	// Submit All Presentation Commands. (Note: this should not be very often unless lots of system_windows)
+	//	//	if (Context[i]->Presentation.size() > 0) {
+	//	//		Result = Context[i]->execute(Context[i]->Presentation);
+	//	//	}
 
-			// Release context from execution lock.
-			Context[i]->ExecutionMutex.unlock();
-		}
+	//	//	// Release context from execution lock.
+	//	//	Context[i]->ExecutionMutex.unlock();
+	//	//}
 
-		return Result;
-	}
+	//	return Result;
+	//}
 
 }
