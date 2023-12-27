@@ -26,40 +26,40 @@ namespace geodesuka::core {
 	}
 
 	void app::update(double aDeltaTime) {
-		// This where all objects/stages and their state are updated by the engine.
+		
 		object_list						Object;
 		std::vector<logic::workload>	ObjectWorkload;
 		std::vector<logic::workload>	StageWorkload;
 
+		// Get all unique objects from each stage.
 		for (size_t i = 0; i < Stage.count(); i++) {
 			Object |= Stage[i]->Object;
 		}
 
+		// Get total free thread count.
 		size_t WorkloadThreadCount = omp_get_max_threads() - Engine->Thread.count() - 1;
 
+		// Calculate Workloads For Each Object & Stage
 		ObjectWorkload = calculate_workloads(Object.count(), WorkloadThreadCount);
 		StageWorkload = calculate_workloads(Stage.count(), WorkloadThreadCount);
-		//CollisionWorkload = logic::calculate_workloads(Stage.count(), this->WorkerThreadCount);
 
 		// Parallel Work For Each Object & Stage
 		#pragma omp parallel
 		{
 			// Get Thread Index
+			// Determine Workloads Regions For Each Thread.
 			int idx = omp_get_thread_num();
 
-			// Determine Workloads Regions For Each Thread.
+			// Update All Stage Specific Qualities.
 			size_t ObjectStartingIndex = ObjectWorkload[idx].Offset;
 			size_t ObjectEndingIndex = ObjectWorkload[idx].Offset + ObjectWorkload[idx].Size;
-
-			size_t StageStartingIndex = StageWorkload[idx].Offset;
-			size_t StageEndingIndex = StageWorkload[idx].Offset + StageWorkload[idx].Size;
-
-			// Update All Stage Specific Qualities.
 			for (size_t i = ObjectStartingIndex; i < ObjectEndingIndex; i++) {
 				Object[i]->update(aDeltaTime);
 			}
 
 			// Update All Stage Specific Qualities.
+			size_t StageStartingIndex = StageWorkload[idx].Offset;
+			size_t StageEndingIndex = StageWorkload[idx].Offset + StageWorkload[idx].Size;
 			for (size_t i = StageStartingIndex; i < StageEndingIndex; i++) {
 				Stage[i]->update(aDeltaTime);
 			}
@@ -68,7 +68,7 @@ namespace geodesuka::core {
 
 		// Calcuate Collision Effects for 2D & 3D scene
 		for (size_t i = 0; i < Stage.count(); i++) {
-			Stage[i]->collision_detection();
+			Stage[i]->collision(aDeltaTime);
 		}
 
 	}

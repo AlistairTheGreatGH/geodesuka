@@ -83,18 +83,6 @@ namespace geodesuka::core {
 
 		friend class default_renderer;
 
-		enum state {
-			CREATION,
-			READY,
-			DESTRUCTION
-		};
-
-		enum blending {
-			OPAQUE,
-			TRANSLUCENT,
-			TRANSPARENT
-		};
-
 		virtual ~object_t();
 
 		virtual void set_position(math::vec3<float> aPosition);
@@ -118,14 +106,16 @@ namespace geodesuka::core {
 
 		// Used for shared usage between Engine & App.
 		std::mutex					Mutex;
-		std::atomic<state>			State;
 		engine*						Engine;
 		gcl::context*				Context;
 		stage_t*					Stage;
 		util::string				Name;
 
+		// Input
 		math::vec3<float>			InputVelocity;
 		math::vec3<float>			InputForce;
+
+		// Physics
 		float						Mass;				// Kilogram			[kg]
 		float						Time;				// Second 			[s]
 		math::vec3<float>			Position;			// Meter			[m]
@@ -136,7 +126,7 @@ namespace geodesuka::core {
 		math::vec3<float>			DirectionY;			// Up				[Normalized]
 		math::vec3<float>			DirectionZ;			// Forward			[Normalized]
 
-		blending					Blending;
+
 		graphics::model*			Model;
 		//physics::mesh 				Mesh;
 

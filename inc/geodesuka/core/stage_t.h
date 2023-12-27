@@ -59,19 +59,6 @@ namespace geodesuka::core {
 
 	protected:
 
-		struct collision_pair {
-			int i, j;
-			bool Detected;
-		};
-
-
-		// Will check if bounding radius of collision meshes intersect.
-		std::vector<logic::workload>	SoftDetectionWorkload;
-		std::vector<collision_pair>		SoftDetectionPair;
-
-		// Length is the same as the number of possible collisions.
-		std::vector<collision_pair>		CollisionPair;
-
 		stage_t(engine* aEngine, gcl::context* aContext);
 
 		// This function can be called after all objects and render targets have been created.
@@ -84,9 +71,7 @@ namespace geodesuka::core {
 
 		// Host Memory Operations
 		virtual void update(double aDeltaTime);
-		virtual void collision_setup();
-		virtual void collision_detection();
-		virtual void collision_interaction();
+		virtual void collision(double aDeltaTime);
 
 		// Device Context Operations
 		virtual VkSubmitInfo transfer();

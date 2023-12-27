@@ -24,19 +24,19 @@ namespace geodesuka::core::graphics {
 
 		struct node {
 			// Tree Info.
-			node*			Root;
-			node*			Parent;
-			int				ChildCount;
-			node*			Child;
+			node*					Root;
+			node*					Parent;
+			int						ChildCount;
+			node*					Child;
 
 			// Node Info.
-			util::string	Name;
-			int				MeshIndexCount;
-			int*			MeshIndex;
+			util::string			Name;
+			int						MeshIndexCount;
+			int*					MeshIndex;
 			math::mat4<float>		Transformation;
 
-			gcl::context* 	Context;
-			gcl::buffer 	UniformBuffer;
+			gcl::context* 			Context;
+			gcl::buffer 			UniformBuffer;
 
 			node();
 			node(const node& aInput);

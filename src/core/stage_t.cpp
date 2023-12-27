@@ -68,39 +68,7 @@ namespace geodesuka::core {
 
 	}
 
-	void stage_t::collision_setup() {
-		//tex:
-		// Total Collision Pairs is equal to:
-		// $$ \textrm{Collision Pair Count} = \frac{n (n - 1)}{2} $$
-
-		size_t n = Object.count();
-		size_t PairCount = (n * (n - 1)) / 2;
-
-		//SoftDetectionWorkload = calculate_workloads(PairCount)
-		
-		// Use multithreading to calculate collision workloads with current worker thread count.
-		// calculate_workloads(Stage[i]->Object.count(), this->EngineThreadCount);
-	}
-
-	void stage_t::collision_detection() {
-		// Soft Collision Detection Between Objects.
-
-		// Soft Collision Detection is done by
-		#pragma omp parallel
-		{
-			int idx = omp_get_thread_num();
-			size_t Start = 0;
-			size_t End = 0;
-			for (size_t i = Start; i < End; i++){
-				
-			}
-		}
-
-	}
-
-	void stage_t::collision_interaction() {
-
-	}
+	void stage_t::collision(double aDeltaTime) {}
 
 	VkSubmitInfo stage_t::transfer() {
 		VkSubmitInfo TransferBatch{};

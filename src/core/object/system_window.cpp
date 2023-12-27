@@ -87,7 +87,6 @@ namespace geodesuka::core::object {
 	//}
 
 	system_window::~system_window() {
-		this->State = DESTRUCTION;
 		this->Mutex.lock();
 		this->clear();
 		this->Mutex.unlock();

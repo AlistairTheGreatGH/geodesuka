@@ -23,7 +23,6 @@
 
 namespace geodesuka {
 	namespace core {
-		class state;
 		class app;
 	}
 	class engine;

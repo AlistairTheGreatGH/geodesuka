@@ -27,12 +27,9 @@ namespace geodesuka::builtin::object {
 
 		// Load into device context memory.
 		//this->Model = graphics::model(Context, HostModel);
-
-		State = READY;
 	}
 
 	triangle::~triangle() {
-		State = DESTRUCTION;
 		// Delete Drawpack
 		//delete PixelShader;
 		//delete VertexShader;

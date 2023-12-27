@@ -152,18 +152,7 @@ namespace geodesuka::core {
 	// ------------------------------ public methods ------------------------------- //
 
 	object_t::~object_t() {
-		if ((Stage != nullptr) && (Stage->State != DESTRUCTION)) {
-			// Suspend all other shared threads.
-			Engine->ThreadController.suspend_all();
 
-			//// Remove object from parent stage, and all shared stages.
-			//for (int i = 0; i < Engine->Stage.count(); i++) {
-			//	Engine->Stage[i]->Object -= this;
-			//}
-
-			// Resume all engine threads.
-			Engine->ThreadController.resume_all();
-		}
 	}
 
 	void object_t::set_position(math::vec3<float> aPosition) {
@@ -247,7 +236,6 @@ namespace geodesuka::core {
 	object_t::object_t(gcl::context* aContext, stage_t* aStage, const char* aName) {
 
 		// Internal API.
-		State			= state::CREATION;
 		if (aContext != nullptr){
 			Engine			= aContext->parent_engine();
 		}
@@ -257,17 +245,6 @@ namespace geodesuka::core {
 		Context			= aContext;
 		Stage			= aStage;
 		Name			= aName;
-
-		if (((Engine != nullptr) && (Stage != nullptr)) ? (Stage->State != DESTRUCTION) : false)  {
-			// Suspend all other shared threads.
-			Engine->ThreadController.suspend_all();
-			
-			// Add object to stage.
-			Stage->Object |= this;
-
-			// Resume all engine threads.
-			Engine->ThreadController.resume_all();
-		}
 
 		InputVelocity	= math::vec3<float>(0.0, 0.0, 0.0);
 		InputForce		= math::vec3<float>(0.0, 0.0, 0.0);

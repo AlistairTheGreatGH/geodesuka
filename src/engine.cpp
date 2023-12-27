@@ -451,6 +451,7 @@ namespace geodesuka {
 		std::vector<std::vector<VkSubmitInfo>> Compute;
 
 		while (ThreadController.cycle(aApp->TimeStep.load())) {
+			double dt = aApp->TimeStep.load();
 
 			// Process system_window Creation/Destruction calls.
 			system_window::process_window_handle_call();
@@ -462,7 +463,8 @@ namespace geodesuka {
 
 			aApp->Mutex.lock();
 			
-			aApp->update(aApp->TimeStep.load());
+			// Updates all resources owned by user application.
+			aApp->update(dt);
 
 			//Transfer = aApp->gather_transfer_operations();
 
