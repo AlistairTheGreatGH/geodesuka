@@ -607,11 +607,11 @@ namespace geodesuka::core::object {
 
 		// Subpass 0:
 
-		// Describe how Vertex Buffers must be be accessed while bound.
-		Rasterizer.Input.vertexBindingDescriptionCount = 1;
-		Rasterizer.bind(0, sizeof(physics::mesh::vertex), 0, offsetof(physics::mesh::vertex, Position));
-		Rasterizer.bind(0, sizeof(physics::mesh::vertex), 1, offsetof(physics::mesh::vertex, TextureCoordinate));
-		Rasterizer.bind(0, sizeof(physics::mesh::vertex), 2, offsetof(physics::mesh::vertex, Color));
+		//// Describe how Vertex Buffers must be be accessed while bound.
+		//Rasterizer.Input.vertexBindingDescriptionCount = 1;
+		//Rasterizer.bind(0, sizeof(physics::mesh::vertex), 0, offsetof(physics::mesh::vertex, Position));
+		//Rasterizer.bind(0, sizeof(physics::mesh::vertex), 1, offsetof(physics::mesh::vertex, TextureCoordinate));
+		//Rasterizer.bind(0, sizeof(physics::mesh::vertex), 2, offsetof(physics::mesh::vertex, Color));
 
 		// How to intepret vertex data in rasterization.
 		Rasterizer.InputAssembly.topology					= VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
