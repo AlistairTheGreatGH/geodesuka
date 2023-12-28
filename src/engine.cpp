@@ -41,7 +41,7 @@ namespace geodesuka {
 		bool isEngineResourcesReady 	= false;
 
 		EngineInstanceCount				+= 1;
-		this->Name 						= "Fred";
+		this->Name 						= "Geodesuka Engine";
 		this->Handle					= VK_NULL_HANDLE;
 
 		// --------------- Third Party Library Initialization Process --------------- //
@@ -254,9 +254,9 @@ namespace geodesuka {
 
 		AppInfo.sType						= VK_STRUCTURE_TYPE_APPLICATION_INFO;
 		AppInfo.pNext						= NULL;
-		AppInfo.pApplicationName			= "";
+		AppInfo.pApplicationName			= ""; // TODO: Funnel App Name here?
 		AppInfo.applicationVersion			= VK_MAKE_VERSION(1, 0, 0);
-		AppInfo.pEngineName					= "Geodesuka Engine";
+		AppInfo.pEngineName					= (const char*)this->Name.Handle;
 		AppInfo.engineVersion				= VK_MAKE_VERSION(Version.Major, Version.Minor, Version.Revision);
 		AppInfo.apiVersion					= VK_MAKE_VERSION(1, 2, 0);
 
@@ -347,7 +347,7 @@ namespace geodesuka {
 				std::vector<VkPhysicalDevice> PhysicalDevice(PhysicalDeviceCount);
 
 				MainStream << "Physical Device Count: " << PhysicalDeviceCount;
-				this->Log << log::message(log::INFO, log::SUCCESS, "Engine Startup", log::GEODESUKA, "device", "", MainStream.str().c_str());
+				this->Log << log::message(log::INFO, log::SUCCESS, "Engine Startup", log::GEODESUKA, "device", "Device", MainStream.str().c_str());
 				Result = vkEnumeratePhysicalDevices(this->Handle, &PhysicalDeviceCount, PhysicalDevice.data());
 				this->Device.resize(PhysicalDeviceCount);
 				for (uint32_t i = 0; i < PhysicalDeviceCount; i++) {
@@ -402,14 +402,12 @@ namespace geodesuka {
 	// Engine will run designated user defined app.
 	int engine::run(app* aApp) {
 
-		Log << log::message("engine", log::INFO, log::SUCCESS, "Update Thread");
-
 		State = state::RUNNING;
 
 		// Spawn Core Engine Threads.
-		//Thread |= new std::thread(&engine::render, this, aApp);
+		Thread |= new std::thread(&engine::render, this, aApp);
 		//Thread |= new std::thread(&engine::audio, this);
-		//Thread |= new std::thread(&engine::terminal, this, aApp);
+		Thread |= new std::thread(&engine::terminal, this, aApp);
 		Thread |= new std::thread(&app::prerun, aApp);
 
 		omp_set_num_threads(omp_get_max_threads() - Thread.count() - 1);
@@ -451,6 +449,8 @@ namespace geodesuka {
 		std::map<context*, std::vector<VkSubmitInfo>> Transfer;
 		std::map<context*, std::vector<VkSubmitInfo>> Compute;
 
+		this->Log << log::message(log::INFO, log::SUCCESS, "Thread Startup", log::GEODESUKA, "engine", this->Name.Handle, "Update Thread Initiated!");
+
 		while (ThreadController.cycle(aApp->TimeStep.load())) {
 			double dt = aApp->TimeStep.load();
 
@@ -477,19 +477,19 @@ namespace geodesuka {
 
 			for (context* Ctx : Context.Handle) {
 				// Lock Context for execution.
-				Ctx->ExecutionMutex.lock();
+				Ctx->Mutex.lock();
 
 				// Wait for other inflight operations to finish.
-				Result = Ctx->wait_and_reset(Ctx->ExecutionFence);
+				Result = Ctx->wait(device::operation::TRANSFER | device::operation::COMPUTE | device::operation::GRAPHICS_AND_COMPUTE);
 
 				// Execute all transfer device operations.
-				Result = Ctx->execute(device::operation::TRANSFER, Transfer[Ctx], Ctx->ExecutionFence[0]);
+				Result = Ctx->execute(device::operation::TRANSFER, Transfer[Ctx]);
 
 				// Execute all compute device operations.
-				Result = Ctx->execute(device::operation::COMPUTE, Compute[Ctx], Ctx->ExecutionFence[1]);
+				Result = Ctx->execute(device::operation::COMPUTE, Compute[Ctx]);
 
 				// Unlock device context.
-				Ctx->ExecutionMutex.unlock();
+				Ctx->Mutex.unlock();
 			}
 
 		}
@@ -507,7 +507,7 @@ namespace geodesuka {
 		std::map<gcl::context*, std::vector<VkSubmitInfo>> GraphicsAndCompute;
 		std::map<gcl::context*, std::vector<VkPresentInfoKHR>> Presentation;
 
-		this->Log << log::message("engine", log::INFO, log::SUCCESS, "Render Thread");
+		this->Log << log::message(log::INFO, log::SUCCESS, "Thread Startup", log::GEODESUKA, "engine", this->Name.Handle, "Render Thread Initiated!");
 
 		while (ThreadController.cycle(0.0)) {
 
@@ -523,43 +523,32 @@ namespace geodesuka {
 
 			for (context* Ctx : Context.Handle) {
 				// Lock Context for execution.
-				Ctx->ExecutionMutex.lock();
+				Ctx->Mutex.lock();
 
 				// Wait for other inflight operations to finish.
-				for (size_t i = 0; i < 3u; i++) {
-					Result = Ctx->wait_and_reset(Ctx->ExecutionFence);
-				}
+				Result = Ctx->wait(device::operation::TRANSFER | device::operation::COMPUTE | device::operation::GRAPHICS_AND_COMPUTE);
 
 				// Execute all transfer device operations.
-				Result = Ctx->execute(device::operation::GRAPHICS_AND_COMPUTE, GraphicsAndCompute[Ctx], Ctx->ExecutionFence[2]);
+				Result = Ctx->execute(device::operation::GRAPHICS_AND_COMPUTE, GraphicsAndCompute[Ctx]);
+
+				// Unlock device context.
+				Ctx->Mutex.unlock();
 
 				// Execute all system window presentation operations.
 				Result = Ctx->execute(Presentation[Ctx]);
 
-				// Unlock device context.
-				Ctx->ExecutionMutex.unlock();
 			}
 
 		}
 
 	}
 
-	//void engine::audio(core::app* aApp) {
-	//	this->Log << log::message("engine", log::INFO, log::SUCCESS, "Audio Thread");
-	//
-	//	// Does nothing currently.
-	//	while (ThreadController.cycle(0.25)) {
-	//		//*this->State.SystemTerminal << "AudioThread\n";
-	//
-	//	}
-	//
-	//}
-
 	// --------------- System Terminal Thread --------------- //
 	// Will be used for runtime debugging of engine using terminal.
 	// --------------- System Terminal Thread --------------- //
 	void engine::terminal(core::app* aApp) {
-		this->Log << log::message("engine", log::INFO, log::SUCCESS, "Terminal Thread");
+
+		this->Log << log::message(log::INFO, log::SUCCESS, "Thread Startup", log::GEODESUKA, "engine", this->Name.Handle, "Terminal Thread Initiated!");
 
 		while (ThreadController.cycle(0.0)) {
 			util::string Command;
@@ -572,85 +561,5 @@ namespace geodesuka {
 		}
 
 	}
-
-	//VkResult engine::execute_transfer_and_compute_operations(
-	//	const std::map<gcl::context*, std::vector<VkSubmitInfo>>& aTransferOperations, 
-	//	const std::map<gcl::context*, std::vector<VkSubmitInfo>>& aComputeOperations
-	//) {
-	//	VkResult Result = VK_SUCCESS;
-
-	//	//for (size_t i = 0; i < Context.count(); i++) {
-
-	//	//	// Lock Context for execution.
-	//	//	Context[i]->ExecutionMutex.lock();
-
-	//	//	// Iterate through all workbatches and search (and halt) for inflight operations.
-	//	//	for (size_t j = 0; j < 3; j++) {
-	//	//		if (Context[i]->Submission[j].size() > 0) {
-	//	//			vkWaitForFences(Context[i]->Handle, 1, &Context[i]->ExecutionFence[j], VK_TRUE, UINT64_MAX);
-	//	//			vkResetFences(Context[i]->Handle, 1, &Context[i]->ExecutionFence[j]);
-	//	//			Context[i]->Submission[j].clear();
-	//	//		}
-	//	//	}
-
-	//	//	Context[i]->Submission[0] = aTransferOperations[i];
-	//	//	Context[i]->Submission[1] = aComputeOperations[i];
-
-	//	//	// Submit Current Transfer Workload.
-	//	//	if (Context[i]->Submission[0].size() > 0) {
-	//	//		Result = Context[i]->execute(device::TRANSFER, Context[i]->Submission[0], Context[i]->ExecutionFence[0]);
-	//	//	}
-
-	//	//	// Submit Current Compute Workload.
-	//	//	if (Context[i]->Submission[1].size() > 0) {
-	//	//		Result = Context[i]->execute(device::COMPUTE, Context[i]->Submission[1], Context[i]->ExecutionFence[1]);
-	//	//	}
-
-	//	//	// Release context from execution lock.
-	//	//	Context[i]->ExecutionMutex.unlock();
-	//	//}
-
-	//	return Result;
-	//}
-
-	//VkResult engine::execute_graphics_and_compute_operations(
-	//	const std::map<gcl::context*, std::vector<VkSubmitInfo>>& aGraphicsAndCompute, 
-	//	const std::map<gcl::context*, std::vector<VkPresentInfoKHR>>& aPresentation
-	//) {
-	//	VkResult Result = VK_SUCCESS;
-
-	//	//for (size_t i = 0; i < Context.count(); i++) {
-
-	//	//	// Lock Context for execution.
-	//	//	Context[i]->ExecutionMutex.lock();
-
-	//	//	// Iterate through all workbatches and search (and halt) for inflight operations.
-	//	//	for (size_t j = 0; j < 3; j++) {
-	//	//		if (Context[i]->Submission[j].size() > 0) {
-	//	//			vkWaitForFences(Context[i]->Handle, 1, &Context[i]->ExecutionFence[j], VK_TRUE, UINT64_MAX);
-	//	//			vkResetFences(Context[i]->Handle, 1, &Context[i]->ExecutionFence[j]);
-	//	//			Context[i]->Submission[j].clear();
-	//	//		}
-	//	//	}
-
-	//	//	Context[i]->Submission[2] = aGraphicsAndCompute[i];
-	//	//	Context[i]->Presentation = aPresentation[i];
-
-	//	//	// Submit Current Graphics & Compute Workloads.
-	//	//	if (Context[i]->Submission[2].size() > 0) {
-	//	//		Result = Context[i]->execute(device::GRAPHICS_AND_COMPUTE, Context[i]->Submission[2], Context[i]->ExecutionFence[2]);
-	//	//	}
-
-	//	//	// Submit All Presentation Commands. (Note: this should not be very often unless lots of system_windows)
-	//	//	if (Context[i]->Presentation.size() > 0) {
-	//	//		Result = Context[i]->execute(Context[i]->Presentation);
-	//	//	}
-
-	//	//	// Release context from execution lock.
-	//	//	Context[i]->ExecutionMutex.unlock();
-	//	//}
-
-	//	return Result;
-	//}
 
 }

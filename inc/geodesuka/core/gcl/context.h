@@ -79,15 +79,16 @@ namespace geodesuka::core::gcl {
 		VkResult wait(VkFence aFence);
 		VkResult wait(util::list<VkFence> aFenceList, VkBool32 aWaitOnAll = VK_TRUE);
 		VkResult wait(std::vector<VkFence> aFenceList, VkBool32 aWaitOnAll = VK_TRUE);
+		VkResult wait(uint aDeviceOperation);
 		VkResult reset(std::vector<VkFence> aFenceList);
 		VkResult wait_and_reset(std::vector<VkFence> aFenceList, VkBool32 aWaitOnAll = VK_TRUE);
 		
-		VkResult execute(device::operation aDeviceOperation, VkCommandBuffer aCommandBuffer, VkFence aFence);
-		VkResult execute(device::operation aDeviceOperation, const command_list& aCommandList, VkFence aFence);
-		VkResult execute(device::operation aDeviceOperation, const std::vector<gcl::command_list>& aCommandBatch, VkFence aFence);
-		VkResult execute(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList, VkFence aFence);
+		VkResult execute(device::operation aDeviceOperation, VkCommandBuffer aCommandBuffer, VkFence aFence = VK_NULL_HANDLE);
+		VkResult execute(device::operation aDeviceOperation, const command_list& aCommandList, VkFence aFence = VK_NULL_HANDLE);
+		VkResult execute(device::operation aDeviceOperation, const std::vector<gcl::command_list>& aCommandBatch, VkFence aFence = VK_NULL_HANDLE);
+		VkResult execute(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList, VkFence aFence = VK_NULL_HANDLE);
 		VkResult execute(const std::vector<VkPresentInfoKHR>& aPresentationList);
-		VkResult execute(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList, const std::vector<VkPresentInfoKHR>& aPresentationList, VkFence aFence);
+		VkResult execute(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList, const std::vector<VkPresentInfoKHR>& aPresentationList, VkFence aFence = VK_NULL_HANDLE);
 
 		VkResult execute_and_wait(device::operation aDeviceOperation, VkCommandBuffer aCommandBuffer);
 		VkResult execute_and_wait(device::operation aDeviceOperation, const command_list& aCommandList);
@@ -104,13 +105,6 @@ namespace geodesuka::core::gcl {
 
 	private:
 
-		// -------------------- Engine Metadata -------------------- //
-		
-		// This data is used for engine execution.
-		std::mutex 						ExecutionMutex;
-		std::vector<VkFence> 			ExecutionFence;
-		std::vector<bool> 				ExecutionInFlight;
-
 		// -------------------- Context Data -------------------- //
 
 		// { T, C, G, GC, P }
@@ -121,13 +115,11 @@ namespace geodesuka::core::gcl {
 		std::map<device::operation, VkQueue> 					Queue;
 
 		// --------------- Managed Resources --------------- //
-		
-		command_pool*											CommandPool[4];
+
+		std::map<device::operation, command_pool*>				CommandPool;
 		util::list<VkSemaphore> 								Semaphore;
 		util::list<VkFence> 									Fence;
 		util::list<VkDeviceMemory> 								Memory;
-
-		int qfo(device::operation aOperation);
 
 	};
 

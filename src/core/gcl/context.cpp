@@ -25,6 +25,10 @@ namespace geodesuka::core::gcl {
 		std::vector<VkDeviceQueueCreateInfo> 	QCI;
 		VkDeviceCreateInfo 					 	CI;
 
+		this->Engine = nullptr;
+		this->Device = nullptr;
+		this->Handle = VK_NULL_HANDLE;
+
 		if ((aEngine == nullptr) || (aDevice == nullptr)) return;
 
 		this->Engine = aEngine;
@@ -60,9 +64,10 @@ namespace geodesuka::core::gcl {
 			DQC[i] = this->Device->qfc(i);
 		}
 
-		for (int i : UQFI) {
-			QP[i].resize(std::min(RQC[i], DQC[i]));
-			for (size_t j = 0; j < QP.size(); j++) {
+		QP.resize(UQFI.size());
+		for (size_t i = 0; i < UQFI.size(); i++) {
+			QP[i].resize(std::min(RQC[UQFI[i]], DQC[UQFI[i]]));
+			for (size_t j = 0; j < QP[i].size(); j++) {
 				QP[i][j] = 1.0f;
 			}
 		}
@@ -73,8 +78,8 @@ namespace geodesuka::core::gcl {
 			QCI[i].pNext				= NULL;
 			QCI[i].flags				= 0;
 			QCI[i].queueFamilyIndex		= UQFI[i];
-			QCI[i].queueCount			= QP[UQFI[i]].size();
-			QCI[i].pQueuePriorities		= QP[UQFI[i]].data();
+			QCI[i].queueCount			= QP[i].size();
+			QCI[i].pQueuePriorities		= QP[i].data();
 		}
 
 		CI.sType						= VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -102,38 +107,33 @@ namespace geodesuka::core::gcl {
 			*Engine << log::message(Result, "Context Creation", log::GEODESUKA, "context", "instance", "Device Context Creation Failed!");
 		}
 
+		for (device::operation aOp : aDesiredOperations) {
+			Queue[aOp] = VK_NULL_HANDLE;
+		}
+
 		for (const auto& Pair : Queue) {
-			// Queue Family Index of Queue.
+			// Operation Index in aDesiredOperations list.
+			size_t OI = std::distance(aDesiredOperations.begin(), std::find(aDesiredOperations.begin(), aDesiredOperations.end(), Pair.first));
+			// Queue Family Index of Desired Operation.
 			int i = this->Device->qfi(Pair.first);
-			// Index of Pair.first in QFI.
-			int k = 0;
-			for (size_t m = 0; m < aDesiredOperations.size(); i++) {
-				if (aDesiredOperations[m] == Pair.first) {
-					k = m;
-					break;
-				}
-			}
+			// Total Offset of Queue in Queue Family.
+			int TO = -1;
 			// Determines the offset of the queue in the queue family.
 			for (size_t k = 0; k < QFI.size(); k++) {
-
+				if (i == QFI[k]) {
+					TO++;
+				}
+				// Once index has been found, break.
+				if (OI == k) break;
 			}
-
-			int j = this->qfo(Pair.first) % this->Device->qfc(i);
+			// Get Queue Index in Queue Family.
+			int j = TO % std::min(RQC[i], DQC[i]);
 			vkGetDeviceQueue(Handle, i, j, &Queue[Pair.first]);
 		}
 
-		this->CommandPool[0] = new command_pool(this, 0, device::operation::TRANSFER);
-		this->CommandPool[1] = new command_pool(this, 0, device::operation::COMPUTE);
-		this->CommandPool[2] = new command_pool(this, 0, device::operation::GRAPHICS);
-		this->CommandPool[3] = new command_pool(this, 0, device::operation::GRAPHICS_AND_COMPUTE);
-
-		this->ExecutionFence.push_back(this->create_fence());
-		this->ExecutionFence.push_back(this->create_fence());
-		this->ExecutionFence.push_back(this->create_fence());
-
-		this->ExecutionInFlight.push_back(false);
-		this->ExecutionInFlight.push_back(false);
-		this->ExecutionInFlight.push_back(false);
+		for (device::operation Op : aDesiredOperations) {
+			CommandPool[Op] = new command_pool(this, 0, Op);
+		}
 
 		this->Engine->Context |= this;
 
@@ -141,8 +141,7 @@ namespace geodesuka::core::gcl {
 
 	context::~context() {
 
-		// Clear all data on queues.
-		Queue.clear();
+		this->Engine->Context -= this;
 
 		// Free all memory handles on destruction of context.
 		for (size_t i = 0; this->Memory.count(); i++){
@@ -159,13 +158,12 @@ namespace geodesuka::core::gcl {
 			vkDestroySemaphore(this->Handle, this->Semaphore[i], NULL);
 		}
 
-		delete this->CommandPool[0];
-		delete this->CommandPool[1];
-		delete this->CommandPool[2];
-		delete this->CommandPool[3];
+		for (auto& Pair : CommandPool) {
+			delete Pair.second;
+			Pair.second = nullptr;
+		}
 
 		vkDestroyDevice(this->Handle, NULL);
-
 	}
 
 	void context::operator<<(const log::message aNewLogMessage) {
@@ -173,77 +171,19 @@ namespace geodesuka::core::gcl {
 	}
 
 	VkCommandBuffer context::create_command_buffer(device::operation aDeviceOperation, VkCommandBufferLevel aLevel) {
-		switch (aDeviceOperation) {
-		case device::operation::TRANSFER:
-			return this->CommandPool[0]->allocate(aLevel);
-		case device::operation::COMPUTE:
-			return this->CommandPool[1]->allocate(aLevel);
-		case device::operation::GRAPHICS:
-			return this->CommandPool[2]->allocate(aLevel);
-		case device::operation::GRAPHICS_AND_COMPUTE:
-			return this->CommandPool[3]->allocate(aLevel);
-		default:
-			return VK_NULL_HANDLE;
-		}
+		return CommandPool[aDeviceOperation]->allocate(aLevel);
 	}
 
 	command_list context::create_command_list(device::operation aDeviceOperation, VkCommandBufferLevel aLevel, uint aCount) {
-		command_list List;
-		switch (aDeviceOperation) {
-		case device::operation::TRANSFER:
-			List = this->CommandPool[0]->allocate(aLevel, aCount);
-			break;
-		case device::operation::COMPUTE:
-			List = this->CommandPool[1]->allocate(aLevel, aCount);
-			break;
-		case device::operation::GRAPHICS:
-			List = this->CommandPool[2]->allocate(aLevel, aCount);
-			break;
-		case device::operation::GRAPHICS_AND_COMPUTE:
-			List = this->CommandPool[3]->allocate(aLevel, aCount);
-			break;
-		default:
-			break;
-		}
-		return List;
+		return CommandPool[aDeviceOperation]->allocate(aLevel, aCount);
 	}
 
-	void context::destroy_command_buffer(device::operation aQueueFamilySupportOption, VkCommandBuffer aCommandBuffer) {
-		switch (aQueueFamilySupportOption) {
-		case device::operation::TRANSFER:
-			this->CommandPool[0]->release(aCommandBuffer);
-			break;
-		case device::operation::COMPUTE:
-			this->CommandPool[1]->release(aCommandBuffer);
-			break;
-		case device::operation::GRAPHICS:
-			this->CommandPool[2]->release(aCommandBuffer);
-			break;
-		case device::operation::GRAPHICS_AND_COMPUTE:
-			this->CommandPool[3]->release(aCommandBuffer);
-			break;
-		default:
-			break;
-		}
+	void context::destroy_command_buffer(device::operation aDeviceOperation, VkCommandBuffer aCommandBuffer) {
+		CommandPool[aDeviceOperation]->release(aCommandBuffer);
 	}
 
-	void context::destroy_command_list(device::operation aQueueFamilySupportOption, command_list& aCommandList) {
-		switch (aQueueFamilySupportOption) {
-		case device::operation::TRANSFER:
-			this->CommandPool[0]->release(aCommandList);
-			break;
-		case device::operation::COMPUTE:
-			this->CommandPool[1]->release(aCommandList);
-			break;
-		case device::operation::GRAPHICS:
-			this->CommandPool[2]->release(aCommandList);
-			break;
-		case device::operation::GRAPHICS_AND_COMPUTE:
-			this->CommandPool[3]->release(aCommandList);
-			break;
-		default:
-			break;
-		}
+	void context::destroy_command_list(device::operation aDeviceOperation, command_list& aCommandList) {
+		CommandPool[aDeviceOperation]->release(aCommandList);
 	}
 
 	VkResult context::begin(VkCommandBuffer aCommandBuffer) {
@@ -375,6 +315,17 @@ namespace geodesuka::core::gcl {
 		return vkWaitForFences(this->Handle, aFenceList.size(), aFenceList.data(), aWaitOnAll, UINT64_MAX);
 	}
 
+	VkResult context::wait(uint aDeviceOperation) {
+		VkResult Result = VK_SUCCESS;
+		for (int i = 0; i < 32; i++) {
+			uint Operation = aDeviceOperation & (1 << i);
+			if ((Operation != 0) && (Queue.count((device::operation)Operation) > 0)) {
+				Result = vkQueueWaitIdle(Queue[(device::operation)Operation]);
+			}
+		}
+		return Result;
+	}
+
 	VkResult context::reset(std::vector<VkFence> aFenceList) {
 		return vkResetFences(this->Handle, aFenceList.size(), aFenceList.data());
 	}
@@ -430,19 +381,13 @@ namespace geodesuka::core::gcl {
 		if ((aSubmissionList.size() == 0) && (aPresentationList.size() == 0)) return Result;
 
 		switch (aDeviceOperation) {
-		case device::operation::TRANSFER:
-		case device::operation::COMPUTE:
-		case device::operation::GRAPHICS:
-		case device::operation::GRAPHICS_AND_COMPUTE:
-			Result = vkQueueSubmit(Queue[aDeviceOperation], aSubmissionList.size(), aSubmissionList.data(), aFence);
-			break;
 		case device::operation::PRESENT:
 			for (size_t k = 0; k < aPresentationList.size(); k++) {
 				Result = vkQueuePresentKHR(Queue[aDeviceOperation], &aPresentationList[k]);
 			}
 			break;
 		default:
-			Result = VK_ERROR_FEATURE_NOT_PRESENT;
+			Result = vkQueueSubmit(Queue[aDeviceOperation], aSubmissionList.size(), aSubmissionList.data(), aFence);
 			break;
 		}
 
@@ -508,12 +453,6 @@ namespace geodesuka::core::gcl {
 
 	VkDevice context::handle() {
 		return this->Handle;
-	}
-
-	int context::qfo(device::operation aOperation) {
-		int Offset = 0;
-		//for (int i : )
-		return Offset;
 	}
 
 }

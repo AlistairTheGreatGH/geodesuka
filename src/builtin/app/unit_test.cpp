@@ -76,7 +76,7 @@ namespace geodesuka::builtin::app {
 
 		}
 
-		delete Window;
+		//delete Window;
 
 		delete DeviceContext;
 	}

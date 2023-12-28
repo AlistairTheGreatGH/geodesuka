@@ -46,12 +46,12 @@ namespace geodesuka::core::object {
 		this->Mutex.lock();
 		for (int i = 0; i < aRhs.count(); i++) {
 			std::cout << util::log::message::type_to_string(aRhs[i].Type) << ": " << util::log::message::code_to_string(aRhs[i].Code);
-			std::cout << "|" << "Phase: " << aRhs[i].Phase;
-			std::cout << "|" << "API: " << util::log::message::api_to_string(aRhs[i].API);
+			std::cout << " | " << "Phase: " << aRhs[i].Phase;
+			std::cout << " | " << "API: " << util::log::message::api_to_string(aRhs[i].API);
 			//std::cout << "|" << "ThreadID: " << aRhs[i].ThreadID;
-			std::cout << "|" << "Object Type: " << aRhs[i].ObjectType;
-			std::cout << "|" << "Object Name: " << aRhs[i].ObjectName;
-			std::cout << "|" << "Content: " << aRhs[i].Content;
+			std::cout << "| " << "Object Type: " << aRhs[i].ObjectType;
+			std::cout << " | " << "Object Name: " << aRhs[i].ObjectName;
+			std::cout << " | " << "Content: " << aRhs[i].Content;
 			std::cout << std::endl;
 		}
 		this->Mutex.unlock();	

@@ -87,16 +87,16 @@ namespace geodesuka::core::gcl {
 
 		vkGetPhysicalDeviceFeatures(this->Handle, &this->Features);
 
-		/*
-		vkGetPhysicalDeviceProperties(this->Handle, &this->Properties);
-		vkGetPhysicalDeviceFeatures(this->Handle, &this->Features);
-		vkGetPhysicalDeviceMemoryProperties(this->Handle, &this->MemoryProperties);
-
 		// Clear up Dummy stuff.
 		vkDestroySurfaceKHR(aEngine->handle(), DummySurface, NULL);
 		DummySurface = VK_NULL_HANDLE;
 		glfwDestroyWindow(DummyWindow);
 		DummyWindow = NULL;
+
+		/*
+		vkGetPhysicalDeviceProperties(this->Handle, &this->Properties);
+		vkGetPhysicalDeviceFeatures(this->Handle, &this->Features);
+		vkGetPhysicalDeviceMemoryProperties(this->Handle, &this->MemoryProperties);
 
 		std::stringstream StringStream;
 		StringStream << "\n\t" << "Queue Operations Supported: ";
@@ -294,13 +294,15 @@ namespace geodesuka::core::gcl {
 	bool device::is_extension_list_supported(std::vector<const char*> aExtension) const {
 		// Checks if ExtensionList is a subset of existing extensions.
 		bool isSupported = true;
-		std::vector<VkExtensionProperties> Extension = this->get_extensions();
-		for (size_t i = 0; i < Extension.size(); i++) {
-			size_t L1 = strlen(Extension[i].extensionName);
-			for (size_t j = 0; j < aExtension.size(); j++) {
-				size_t L2 = strlen(aExtension[j]);
-				isSupported &= ((L1 == L2) && (memcmp(Extension[i].extensionName, aExtension[j], L1 * sizeof(char)) == 0));
+		const std::vector<VkExtensionProperties> Extension = this->get_extensions();
+		for (const char* L : aExtension) {
+			bool ExistsInSet = false;
+			for (const VkExtensionProperties& R : Extension) {
+				ExistsInSet = (strcmp(L, R.extensionName) == 0);
+				if (ExistsInSet) break;
 			}
+			isSupported &= ExistsInSet;
+			if (!isSupported) break;
 		}
 		return isSupported;
 	}
