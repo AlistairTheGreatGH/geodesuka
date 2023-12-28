@@ -35,11 +35,18 @@ namespace geodesuka::builtin::app {
 	void unit_test::run() {
 
 		// Needed for interaction with WSI.
-		util::list<const char*> Layers;
-		util::list<const char*> Extensions = util::list<const char*>(system_window::RequiredContextExtension.size(), system_window::RequiredContextExtension.data());
+		std::vector<const char*> Layers;
+		std::vector<const char*> Extensions = system_window::RequiredContextExtension;
+		std::vector<device::operation> DesiredOperations = {
+			device::operation::TRANSFER,
+			device::operation::COMPUTE,
+			device::operation::GRAPHICS,
+			device::operation::GRAPHICS_AND_COMPUTE,
+			device::operation::PRESENT
+		};
 
 		// Create device context with required extensions.
-		DeviceContext = new context(Engine, Engine->PrimaryDevice, Layers, Extensions);
+		DeviceContext = new context(Engine, Engine->PrimaryDevice, Layers, Extensions, DesiredOperations);
 
 		//this->full_test();
 

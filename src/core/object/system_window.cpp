@@ -331,7 +331,7 @@ namespace geodesuka::core::object {
 		VkResult Result = glfwCreateWindowSurface(aEngine->handle(), aWindow, NULL, &aSurface);
 		if (Result == VK_SUCCESS) {
 			VkBool32 isSupported = VK_FALSE;
-			Result = vkGetPhysicalDeviceSurfaceSupportKHR(Device->handle(), Context->qfi(device::operation::PRESENT), this->Surface, &isSupported);
+			Result = vkGetPhysicalDeviceSurfaceSupportKHR(Device->handle(), Context->parent()->qfi(device::operation::PRESENT), this->Surface, &isSupported);
 			if (Result == VK_SUCCESS) {
 				if (isSupported == VK_TRUE) {
 					*Engine << log::message(log::INFO, log::SUCCESS, "System Window Creation", log::VULKAN, "system_window", this->Name.Handle, "Vulkan Surface Presentation Support: Available!");

@@ -32,7 +32,7 @@ namespace geodesuka::core::gcl {
 		//friend class geodesuka::core::state;
 		friend class geodesuka::engine;
 
-		context(engine* aEngine, device* aDevice, util::list<const char*> aLayer, util::list<const char*> aExtension);
+		context(engine* aEngine, device* aDevice, std::vector<const char*> aLayer, std::vector<const char*> aExtension, std::vector<device::operation> aDesiredOperations);
 		~context();
 
 		// Used to aggregate engine logs.
@@ -95,9 +95,6 @@ namespace geodesuka::core::gcl {
 		VkResult execute_and_wait(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList);
 		VkResult execute_and_wait(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList, const std::vector<VkPresentInfoKHR>& aPresentationList);
 
-		bool available(device::operation aOperation);
-		int qfi(device::operation aOperation);
-
 		engine* parent_engine();
 		device* parent_device();
 
@@ -117,28 +114,20 @@ namespace geodesuka::core::gcl {
 		// -------------------- Context Data -------------------- //
 
 		// { T, C, G, GC, P }
-		std::mutex 									Mutex;
-		engine* 									Engine;
-		device* 									Device;
-		std::vector<int> 							QFI;
-		std::vector<int> 							UQFI;
-		std::map<int, int> 							RQC;
-		std::map<int, int> 							DQC;
-		std::vector<std::vector<float>> 			QP;
-		std::vector<VkDeviceQueueCreateInfo>		QCI;
-		VkDeviceCreateInfo 							CI;
-		VkDevice 									Handle;
-		std::map<int, std::vector<VkQueue>> 		Queue;
+		std::mutex 												Mutex;
+		engine* 												Engine;
+		device* 												Device;
+		VkDevice 												Handle;
+		std::map<device::operation, VkQueue> 					Queue;
 
 		// --------------- Managed Resources --------------- //
 		
-		command_pool*								CommandPool[4];
-		util::list<VkSemaphore> 					Semaphore;
-		util::list<VkFence> 						Fence;
-		util::list<VkDeviceMemory> 					Memory;
+		command_pool*											CommandPool[4];
+		util::list<VkSemaphore> 								Semaphore;
+		util::list<VkFence> 									Fence;
+		util::list<VkDeviceMemory> 								Memory;
 
 		int qfo(device::operation aOperation);
-		int uqfi_index(device::operation aOperation);
 
 	};
 

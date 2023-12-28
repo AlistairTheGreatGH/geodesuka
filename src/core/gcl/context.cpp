@@ -15,28 +15,23 @@ namespace geodesuka::core::gcl {
 
 	using namespace util;
 
-	static std::vector<device::operation> DesiredOperations = {
-		device::operation::TRANSFER,
-		device::operation::COMPUTE,
-		device::operation::GRAPHICS,
-		device::operation::GRAPHICS_AND_COMPUTE,
-		device::operation::PRESENT
-	};
-
-	context::context(engine* aEngine, device* aDevice, util::list<const char*> aLayer, util::list<const char*> aExtension) {
-		VkResult Result = VK_SUCCESS;
-		//std::vector<device::qfp> QueueFamilyProperty = aDevice->get_queue_family_properties();
-		//float QueuePriority = 1.0f;
+	context::context(engine* aEngine, device* aDevice, std::vector<const char*> aLayer, std::vector<const char*> aExtension, std::vector<device::operation> aDesiredOperations) {
+		VkResult 								Result = VK_SUCCESS;
+		std::vector<int> 					 	QFI(aDesiredOperations.size());
+		std::vector<int> 					 	UQFI;
+		std::map<int, int> 					 	RQC;
+		std::map<int, int> 					 	DQC;
+		std::vector<std::vector<float>> 	 	QP;
+		std::vector<VkDeviceQueueCreateInfo> 	QCI;
+		VkDeviceCreateInfo 					 	CI;
 
 		if ((aEngine == nullptr) || (aDevice == nullptr)) return;
 
 		this->Engine = aEngine;
 		this->Device = aDevice;
 
-		// Generate a list of supported operations.
-		this->QFI = std::vector<int>(DesiredOperations.size());
-		for (size_t i = 0; i < DesiredOperations.size(); i++) {
-			this->QFI[i] = this->Device->qfi(DesiredOperations[i]);
+		for (size_t i = 0; i < aDesiredOperations.size(); i++) {
+			QFI[i] = this->Device->qfi(aDesiredOperations[i]);
 		}
 
 		for (int i : QFI) {
@@ -56,14 +51,12 @@ namespace geodesuka::core::gcl {
 		}
 
 		for (int i : UQFI) {
-			// Count requested queue count.
 			RQC[i] = 0;
 			for (int j : QFI) {
 				if (i == j) {
 					RQC[i]++;
 				}
 			}
-			// Get Queue Family Queue Count.
 			DQC[i] = this->Device->qfc(i);
 		}
 
@@ -84,17 +77,16 @@ namespace geodesuka::core::gcl {
 			QCI[i].pQueuePriorities		= QP[UQFI[i]].data();
 		}
 
-		// Load VkDevice Create Info.
 		CI.sType						= VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		CI.pNext						= NULL;
 		CI.flags						= 0;
 		CI.queueCreateInfoCount			= QCI.size();
 		CI.pQueueCreateInfos			= QCI.data();
-		CI.enabledLayerCount			= aLayer.count();
-		CI.ppEnabledLayerNames			= aLayer.Handle.data();
-		if (Device->is_extension_list_supported(aExtension.Handle)) {
-			CI.enabledExtensionCount		= aExtension.count();
-			CI.ppEnabledExtensionNames		= aExtension.Handle.data();
+		CI.enabledLayerCount			= aLayer.size();
+		CI.ppEnabledLayerNames			= aLayer.data();
+		if (Device->is_extension_list_supported(aExtension)) {
+			CI.enabledExtensionCount		= aExtension.size();
+			CI.ppEnabledExtensionNames		= aExtension.data();
 		}
 		else {
 			CI.enabledExtensionCount		= 0;
@@ -102,8 +94,7 @@ namespace geodesuka::core::gcl {
 		}
 		CI.pEnabledFeatures				= &aDevice->Features;
 
-		// Create Vulkan Logical Device.
-		Result = vkCreateDevice(Device->handle(), &this->CI, NULL, &this->Handle);
+		Result = vkCreateDevice(Device->handle(), &CI, NULL, &this->Handle);
 		if (Result == VK_SUCCESS) {
 			*Engine << log::message(log::INFO, log::SUCCESS, "Context Creation", log::GEODESUKA, "context", "instance", "Device Context Creation Successful!");
 		}
@@ -111,11 +102,24 @@ namespace geodesuka::core::gcl {
 			*Engine << log::message(Result, "Context Creation", log::GEODESUKA, "context", "instance", "Device Context Creation Failed!");
 		}
 
-		// Get all create queues
-		for (int i : UQFI) {
-			for (int j = 0; j < RQC[i]; j++) {
-				vkGetDeviceQueue(Handle, i, j % DQC[i], &Queue[i][j]);
+		for (const auto& Pair : Queue) {
+			// Queue Family Index of Queue.
+			int i = this->Device->qfi(Pair.first);
+			// Index of Pair.first in QFI.
+			int k = 0;
+			for (size_t m = 0; m < aDesiredOperations.size(); i++) {
+				if (aDesiredOperations[m] == Pair.first) {
+					k = m;
+					break;
+				}
 			}
+			// Determines the offset of the queue in the queue family.
+			for (size_t k = 0; k < QFI.size(); k++) {
+
+			}
+
+			int j = this->qfo(Pair.first) % this->Device->qfc(i);
+			vkGetDeviceQueue(Handle, i, j, &Queue[Pair.first]);
 		}
 
 		this->CommandPool[0] = new command_pool(this, 0, device::operation::TRANSFER);
@@ -425,22 +429,16 @@ namespace geodesuka::core::gcl {
 
 		if ((aSubmissionList.size() == 0) && (aPresentationList.size() == 0)) return Result;
 
-		int i = this->Device->qfi(aDeviceOperation);
-		int j = RQC[i] % DQC[i];
-
-		// Queue Operation Not supported.
-		if (i == -1) return VK_ERROR_FEATURE_NOT_PRESENT;
-		
 		switch (aDeviceOperation) {
 		case device::operation::TRANSFER:
 		case device::operation::COMPUTE:
 		case device::operation::GRAPHICS:
 		case device::operation::GRAPHICS_AND_COMPUTE:
-			Result = vkQueueSubmit(Queue[i][j], aSubmissionList.size(), aSubmissionList.data(), aFence);
+			Result = vkQueueSubmit(Queue[aDeviceOperation], aSubmissionList.size(), aSubmissionList.data(), aFence);
 			break;
 		case device::operation::PRESENT:
 			for (size_t k = 0; k < aPresentationList.size(); k++) {
-				Result = vkQueuePresentKHR(Queue[i][j], &aPresentationList[k]);
+				Result = vkQueuePresentKHR(Queue[aDeviceOperation], &aPresentationList[k]);
 			}
 			break;
 		default:
@@ -492,27 +490,6 @@ namespace geodesuka::core::gcl {
 		return Result;
 	}
 
-	bool context::available(device::operation aOperation) {
-		return (this->qfi(aOperation) != -1);
-	}
-
-	int context::qfi(device::operation aOperation) {
-		switch (aOperation) {
-		case device::operation::TRANSFER: 
-			return this->QFI[0];
-		case device::operation::COMPUTE: 
-			return this->QFI[1];
-		case device::operation::GRAPHICS: 
-			return this->QFI[2];
-		case device::operation::GRAPHICS_AND_COMPUTE: 
-			return this->QFI[3];
-		case device::operation::PRESENT: 
-			return this->QFI[4];
-		default: 
-			return -1;
-		}
-	}
-
 	engine* context::parent_engine() {
 		return this->Engine;
 	}
@@ -537,15 +514,6 @@ namespace geodesuka::core::gcl {
 		int Offset = 0;
 		//for (int i : )
 		return Offset;
-	}
-
-	int context::uqfi_index(device::operation aOperation) {
-		for (size_t i = 0; i < UQFI.size(); i++) {
-			if (this->qfi(aOperation) == UQFI[i]) {
-				return i;
-			}
-		}
-		return -1;
 	}
 
 }
