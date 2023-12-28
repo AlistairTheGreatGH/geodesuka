@@ -295,8 +295,8 @@ namespace geodesuka {
 		bool isSystemDisplayAvailable		= false;
 		bool isGCDeviceAvailable			= false;
 
-		this->PrimaryDevice = nullptr;
-		this->PrimaryDisplay = nullptr;
+		this->PrimaryDevice 				= nullptr;
+		this->PrimaryDisplay 				= nullptr;
 
 		// Create System Terminal for logging output and getting user commands. 
 		this->SystemTerminal = new system_terminal(this, "SystemTerminal");
@@ -480,13 +480,13 @@ namespace geodesuka {
 				Ctx->Mutex.lock();
 
 				// Wait for other inflight operations to finish.
-				Result = Ctx->wait(device::operation::TRANSFER | device::operation::COMPUTE | device::operation::GRAPHICS_AND_COMPUTE);
+				Result = Ctx->engine_wait({ device::operation::TRANSFER, device::operation::COMPUTE, device::operation::GRAPHICS_AND_COMPUTE });
 
 				// Execute all transfer device operations.
-				Result = Ctx->execute(device::operation::TRANSFER, Transfer[Ctx]);
+				Result = Ctx->engine_execute(device::operation::TRANSFER, Transfer[Ctx]);
 
 				// Execute all compute device operations.
-				Result = Ctx->execute(device::operation::COMPUTE, Compute[Ctx]);
+				Result = Ctx->engine_execute(device::operation::COMPUTE, Compute[Ctx]);
 
 				// Unlock device context.
 				Ctx->Mutex.unlock();
@@ -526,17 +526,16 @@ namespace geodesuka {
 				Ctx->Mutex.lock();
 
 				// Wait for other inflight operations to finish.
-				Result = Ctx->wait(device::operation::TRANSFER | device::operation::COMPUTE | device::operation::GRAPHICS_AND_COMPUTE);
+				Result = Ctx->engine_wait({ device::operation::TRANSFER, device::operation::COMPUTE, device::operation::GRAPHICS_AND_COMPUTE });
 
 				// Execute all transfer device operations.
-				Result = Ctx->execute(device::operation::GRAPHICS_AND_COMPUTE, GraphicsAndCompute[Ctx]);
+				Result = Ctx->engine_execute(device::operation::GRAPHICS_AND_COMPUTE, GraphicsAndCompute[Ctx]);
 
 				// Unlock device context.
 				Ctx->Mutex.unlock();
 
 				// Execute all system window presentation operations.
 				Result = Ctx->execute(Presentation[Ctx]);
-
 			}
 
 		}

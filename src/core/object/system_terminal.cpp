@@ -36,9 +36,10 @@ namespace geodesuka::core::object {
 	}
 
 	bool system_terminal::operator<<(const char* aRhs) {
-		this->Mutex.lock();
+		//this->Mutex.lock();
+		std::cout << std::endl;
 		std::cout << aRhs;
-		this->Mutex.unlock();
+		std::cout << ">";
 		return false;
 	}
 

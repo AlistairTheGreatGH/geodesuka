@@ -107,8 +107,10 @@ namespace geodesuka::core::gcl {
 			*Engine << log::message(Result, "Context Creation", log::GEODESUKA, "context", "instance", "Device Context Creation Failed!");
 		}
 
-		for (device::operation aOp : aDesiredOperations) {
-			Queue[aOp] = VK_NULL_HANDLE;
+		for (device::operation Op : aDesiredOperations) {
+			ExecutionFence[Op] = this->create_fence();
+			InFlight[Op] = false;
+			Queue[Op] = VK_NULL_HANDLE;
 		}
 
 		for (const auto& Pair : Queue) {
@@ -315,19 +317,18 @@ namespace geodesuka::core::gcl {
 		return vkWaitForFences(this->Handle, aFenceList.size(), aFenceList.data(), aWaitOnAll, UINT64_MAX);
 	}
 
-	VkResult context::wait(uint aDeviceOperation) {
-		VkResult Result = VK_SUCCESS;
-		for (int i = 0; i < 32; i++) {
-			uint Operation = aDeviceOperation & (1 << i);
-			if ((Operation != 0) && (Queue.count((device::operation)Operation) > 0)) {
-				Result = vkQueueWaitIdle(Queue[(device::operation)Operation]);
-			}
-		}
-		return Result;
+	VkResult context::reset(VkFence aFence) {
+		std::vector<VkFence> FenceList = { aFence };
+		return this->reset(FenceList);
 	}
 
 	VkResult context::reset(std::vector<VkFence> aFenceList) {
 		return vkResetFences(this->Handle, aFenceList.size(), aFenceList.data());
+	}
+
+	VkResult context::wait_and_reset(VkFence aFence) {
+		std::vector<VkFence> FenceList = { aFence };
+		return this->wait_and_reset(FenceList);
 	}
 
 	VkResult context::wait_and_reset(std::vector<VkFence> aFenceList, VkBool32 aWaitOnAll) {
@@ -453,6 +454,26 @@ namespace geodesuka::core::gcl {
 
 	VkDevice context::handle() {
 		return this->Handle;
+	}
+
+	VkResult context::engine_wait(std::vector<device::operation> aDeviceOperation) {
+		VkResult Result = VK_SUCCESS;
+		for (device::operation Op : aDeviceOperation) {
+			if ((InFlight.count(Op) > 0) && InFlight[Op]) {
+				Result = this->wait_and_reset(ExecutionFence[Op]);
+				InFlight[Op] = false;
+			}
+		}
+		return Result;
+	}
+
+	VkResult context::engine_execute(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList) {
+		VkResult Result = VK_SUCCESS;
+		if (aSubmissionList.size() > 0) {
+			this->execute(aDeviceOperation, aSubmissionList, ExecutionFence[aDeviceOperation]);
+			this->InFlight[aDeviceOperation] = true;
+		}
+		return Result;
 	}
 
 }

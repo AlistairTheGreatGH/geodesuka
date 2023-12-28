@@ -48,7 +48,7 @@ namespace geodesuka::builtin::app {
 		// Create device context with required extensions.
 		DeviceContext = new context(Engine, Engine->PrimaryDevice, Layers, Extensions, DesiredOperations);
 
-		//this->full_test();
+		this->full_test();
 
 		//// Setup window properties.
 		//system_window::create_info Property;

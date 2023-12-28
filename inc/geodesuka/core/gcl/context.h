@@ -79,8 +79,11 @@ namespace geodesuka::core::gcl {
 		VkResult wait(VkFence aFence);
 		VkResult wait(util::list<VkFence> aFenceList, VkBool32 aWaitOnAll = VK_TRUE);
 		VkResult wait(std::vector<VkFence> aFenceList, VkBool32 aWaitOnAll = VK_TRUE);
-		VkResult wait(uint aDeviceOperation);
+
+		VkResult reset(VkFence aFence);
 		VkResult reset(std::vector<VkFence> aFenceList);
+
+		VkResult wait_and_reset(VkFence aFence);
 		VkResult wait_and_reset(std::vector<VkFence> aFenceList, VkBool32 aWaitOnAll = VK_TRUE);
 		
 		VkResult execute(device::operation aDeviceOperation, VkCommandBuffer aCommandBuffer, VkFence aFence = VK_NULL_HANDLE);
@@ -105,6 +108,14 @@ namespace geodesuka::core::gcl {
 
 	private:
 
+		// -------------------- Engine Data -------------------- //
+
+		std::map<device::operation, bool> 						InFlight;
+		std::map<device::operation, VkFence> 					ExecutionFence;
+		VkResult engine_wait(std::vector<device::operation> aDeviceOperation);
+		VkResult engine_execute(device::operation aDeviceOperation, const std::vector<VkSubmitInfo>& aSubmissionList);
+		VkResult engine_execute(device::operation aDeviceOperation, const std::vector<VkPresentInfoKHR>& aPresentationList);
+		
 		// -------------------- Context Data -------------------- //
 
 		// { T, C, G, GC, P }
@@ -112,6 +123,7 @@ namespace geodesuka::core::gcl {
 		engine* 												Engine;
 		device* 												Device;
 		VkDevice 												Handle;
+
 		std::map<device::operation, VkQueue> 					Queue;
 
 		// --------------- Managed Resources --------------- //
