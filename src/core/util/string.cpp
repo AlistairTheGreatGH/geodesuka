@@ -13,10 +13,6 @@
 
 #include <assert.h>
 
-#ifdef TEXT_DEBUG
-#include <iostream>
-#endif // TEXT_DEBUG
-
 namespace geodesuka::core::util {
 
 	string::string() {

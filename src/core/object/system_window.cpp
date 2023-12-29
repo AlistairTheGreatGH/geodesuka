@@ -9,7 +9,6 @@
 
 #include <GLFW/glfw3.h>
 
-#include <iostream>
 //#include <intrin.h>
 //__stosb(NULL, 0x00, 1024);
 

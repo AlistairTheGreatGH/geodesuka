@@ -4,13 +4,32 @@
 #include <string.h>
 
 #include <iostream>
+#include <filesystem>
 
 namespace geodesuka::core::object {
+
+	const char* system_terminal::red 		= "\033[0;31m";
+	const char* system_terminal::green 		= "\033[0;32m";
+	const char* system_terminal::yellow 	= "\033[0;33m";
+	const char* system_terminal::blue 		= "\033[0;34m";
+	const char* system_terminal::magenta 	= "\033[0;35m";
+	const char* system_terminal::cyan 		= "\033[0;36m";
+	const char* system_terminal::white 		= "\033[0;37m";
+	const char* system_terminal::reset 		= "\033[0m";
 
 	system_terminal::system_terminal(engine* aEngine, const char* aName) : object_t(nullptr, nullptr, aName) {
 		this->Engine = aEngine;
 		// It doesn't matter what the Context is, it isn't used
 		// here for rendering at all.
+
+		std::cout << red		<< "cock" << std::endl;
+		std::cout << green		<< "cock" << std::endl;
+		std::cout << yellow		<< "cock" << std::endl;
+		std::cout << blue		<< "cock" << std::endl;
+		std::cout << magenta 	<< "cock" << std::endl;
+		std::cout << cyan		<< "cock" << std::endl;
+		std::cout << white		<< "cock" << std::endl;
+		std::cout << reset		<< "cock" << std::endl;
 	}
 
 	system_terminal::~system_terminal() {
@@ -22,11 +41,12 @@ namespace geodesuka::core::object {
 		this->Mutex.lock();
 		while (true) {
 			int CodePoint = fgetc(stdin);
-			if (CodePoint == 0x0A) break;
+			if (CodePoint == '\n') break;
 			String += CodePoint;
 		}
 		this->Mutex.unlock();
 		aRhs += String;
+		std::cout << "Geodesuka Engine>";
 		return false;
 	}
 
@@ -36,10 +56,8 @@ namespace geodesuka::core::object {
 	}
 
 	bool system_terminal::operator<<(const char* aRhs) {
-		//this->Mutex.lock();
-		std::cout << std::endl;
-		std::cout << aRhs;
-		std::cout << ">";
+		std::cout << std::endl << aRhs;
+		std::cout << "Geodesuka Engine>";
 		return false;
 	}
 

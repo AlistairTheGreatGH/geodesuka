@@ -23,6 +23,15 @@ namespace geodesuka::core::object {
 
 		friend class geodesuka::engine;
 
+		static const char* red;
+		static const char* green;
+		static const char* yellow;
+		static const char* blue;
+		static const char* magenta;
+		static const char* cyan;
+		static const char* white;
+		static const char* reset;
+
 		~system_terminal();
 
 		// Returns true if input is gathered. Returns false if empty line.
