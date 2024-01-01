@@ -56,26 +56,30 @@ namespace geodesuka::core::gcl {
 		buffer(context* aContext, uint aMemoryType, uint aBufferUsage, int aVertexCount, variable aVertexLayout, void* aVertexData = NULL);
 		buffer(context* aContext, create_info aCreateInfo, size_t aBufferSize, void* aBufferData = NULL);
 		buffer(context* aContext, uint aMemoryType, uint aBufferUsage, size_t aBufferSize, void* aBufferData = NULL);
-		buffer(buffer& aInput);
+		buffer(const buffer& aInput);
 		buffer(buffer&& aInput) noexcept;
 		~buffer();
 
-		buffer& operator=(buffer& aRhs);
+		buffer& operator=(const buffer& aRhs);
 		buffer& operator=(buffer&& aRhs) noexcept;
 		
-		void copy(VkCommandBuffer aCommandBuffer, size_t aDestinationOffset, buffer& aSourceData, size_t aSourceOffset, size_t aRegionSize);
-		void copy(VkCommandBuffer aCommandBuffer, buffer& aSourceData, std::vector<VkBufferCopy> aRegionList);
-		void copy(VkCommandBuffer aCommandBuffer, size_t aDestinationOffset, image& aSourceData, VkOffset3D aSourceOffset, uint32_t aSourceArrayLayer, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount = UINT32_MAX);
-		void copy(VkCommandBuffer aCommandBuffer, image& aSourceData, std::vector<VkBufferImageCopy> aRegionList);
+		void copy(VkCommandBuffer aCommandBuffer, size_t aDestinationOffset, const buffer& aSourceData, size_t aSourceOffset, size_t aRegionSize);
+		void copy(VkCommandBuffer aCommandBuffer, const buffer& aSourceData, std::vector<VkBufferCopy> aRegionList);
+		void copy(VkCommandBuffer aCommandBuffer, size_t aDestinationOffset, const image& aSourceData, VkOffset3D aSourceOffset, uint32_t aSourceArrayLayer, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount = UINT32_MAX);
+		void copy(VkCommandBuffer aCommandBuffer, const image& aSourceData, std::vector<VkBufferImageCopy> aRegionList);
 
-		VkResult copy(size_t aDestinationOffset, buffer& aSourceData, size_t aSourceOffset, size_t aRegionSize);
-		VkResult copy(buffer& aSourceData, std::vector<VkBufferCopy> aRegionList);
-		VkResult copy(size_t aDestinationOffset, image& aSourceData, VkOffset3D aSourceOffset, uint32_t aSourceArrayLayer, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount = UINT32_MAX);
-		VkResult copy(image& aSourceData, std::vector<VkBufferImageCopy> aRegionList);
+		// void write(VkCommandBuffer aCommandBuffer, size_t aDestinationOffset, void* aSourceData, size_t aSourceOffset, size_t aRegionSize);
+		// void write(VkCommandBuffer aCommandBuffer, void* aSourceData, std::vector<VkBufferCopy> aRegionList);
+		// void read(VkCommandBuffer aCommandBuffer, size_t aSourceOffset, void* aDestinationData, size_t aDestinationOffset, size_t aRegionSize);
+		// void read(VkCommandBuffer aCommandBuffer, void* aDestinationData, std::vector<VkBufferCopy> aRegionList);
+
+		VkResult copy(size_t aDestinationOffset, const buffer& aSourceData, size_t aSourceOffset, size_t aRegionSize);
+		VkResult copy(const buffer& aSourceData, std::vector<VkBufferCopy> aRegionList);
+		VkResult copy(size_t aDestinationOffset, const image& aSourceData, VkOffset3D aSourceOffset, uint32_t aSourceArrayLayer, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount = UINT32_MAX);
+		VkResult copy(const image& aSourceData, std::vector<VkBufferImageCopy> aRegionList);
 
 		VkResult write(size_t aDestinationOffset, void* aSourceData, size_t aSourceOffset, size_t aRegionSize);
 		VkResult write(void* aSourceData, std::vector<VkBufferCopy> aRegionList);
-
 		VkResult read(size_t aSourceOffset, void* aDestinationData, size_t aDestinationOffset, size_t aRegionSize);
 		VkResult read(void* aDestinationData, std::vector<VkBufferCopy> aRegionList);
 

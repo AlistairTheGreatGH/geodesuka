@@ -54,8 +54,6 @@ namespace geodesuka::core::object {
 
 		// ----- rendertarget methods ----- //
 
-		virtual std::vector<VkSubmitInfo> render(stage_t* aStage) override;
-
 	private:
 
 		// Generates the Perspective Projection Matrix.

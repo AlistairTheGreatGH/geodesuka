@@ -18,6 +18,13 @@ namespace geodesuka::core::object {
 	class virtual_window : public window {
 	public:
 
+		struct create_info {
+			window::setting 		Window;
+			float 					FrameRate;
+			int 					FrameCount;
+			gcl::image::format 		PixelFormat;
+		};
+
 		static constexpr int ID = 3;
 
 		// -------------------- object_t methods -------------------- //
@@ -29,6 +36,10 @@ namespace geodesuka::core::object {
 		// -------------------- window methods ---------------------- //
 
 		// -------------------- native methods ---------------------- //
+
+		virtual_window(gcl::context* aContext, stage_t* aStage, const char* aName, const create_info& aCreateInfo, math::vec2<int> aPosition, math::vec2<int> aSize);
+
+		~virtual_window();
 
 	protected:
 

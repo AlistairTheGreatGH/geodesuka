@@ -46,7 +46,6 @@ namespace geodesuka::core::object {
 		}
 		this->Mutex.unlock();
 		aRhs += String;
-		std::cout << "Geodesuka Engine>";
 		return false;
 	}
 
@@ -56,8 +55,7 @@ namespace geodesuka::core::object {
 	}
 
 	bool system_terminal::operator<<(const char* aRhs) {
-		std::cout << std::endl << aRhs;
-		std::cout << "Geodesuka Engine>";
+		std::cout << aRhs;
 		return false;
 	}
 

@@ -132,14 +132,8 @@ namespace geodesuka::core {
 		math::vec3<float>			DirectionY;			// Up				[Normalized]
 		math::vec3<float>			DirectionZ;			// Forward			[Normalized]
 
-		
 		physics::mesh				CollisionMesh;
-
 		graphics::model*			Model;
-
-		VkDescriptorPool			DescriptorPool;
-		gcl::buffer					ObjectUBO;
-		VkDescriptorSet				ObjectDS;
 
 		std::map<object::render_target*, graphics::render_operation*> RenderOperation;
 

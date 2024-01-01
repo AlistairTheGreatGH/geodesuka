@@ -5,14 +5,14 @@
 #define MAX_BONE_COUNT 256
 
 // Per Vertex Data
-layout (location = 0) in vec3 VertexPosition;
-layout (location = 1) in vec2 VertexTextureCoordinate;
-layout (location = 2) in vec4 VertexColor;
-layout (location = 3) in vec3 VertexNormal;
-layout (location = 4) in vec3 VertexTangent;
-layout (location = 5) in vec3 VertexBitangent;
-layout (location = 6) in uvec4 VertexBoneID;
-layout (location = 7) in vec4 VertexBoneWeight;
+layout (location = 0) in vec3   VertexPosition;
+layout (location = 1) in vec2   VertexNormal;
+layout (location = 2) in vec4   VertexTangent;
+layout (location = 3) in vec3   VertexBitangent;
+layout (location = 4) in vec3   VertexTextureCoordinate;
+layout (location = 5) in vec3   VertexColor;
+layout (location = 6) in uvec4  VertexBoneID;
+layout (location = 7) in vec4   VertexBoneWeight;
 
 // Mesh Per Vertex Data
 layout (location = 0) out vec3 WorldPosition;

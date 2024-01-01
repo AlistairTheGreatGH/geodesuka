@@ -10,7 +10,7 @@ namespace geodesuka::core::gcl {
 		this->Handle = VK_NULL_HANDLE;
 	}
 
-	command_pool::command_pool(context* aContext, int aFlags, uint32_t aQueueFamilyIndex) {
+	command_pool::command_pool(context* aContext, uint32_t aQueueFamilyIndex, int aFlags) {
 		this->Context = aContext;
 		this->Handle = VK_NULL_HANDLE;
 		if (this->Context == nullptr) return;
@@ -21,7 +21,7 @@ namespace geodesuka::core::gcl {
 		vkCreateCommandPool(aContext->handle(), &this->CreateInfo, NULL, &this->Handle);
 	}
 
-	command_pool::command_pool(context* aContext, int aFlags, device::operation aDeviceOperation) {
+	command_pool::command_pool(context* aContext, device::operation aDeviceOperation, int aFlags) {
 		this->Context = aContext;
 		this->Handle = VK_NULL_HANDLE;
 		if (this->Context == nullptr) return;
@@ -58,7 +58,7 @@ namespace geodesuka::core::gcl {
 		return ReturnCommandBuffer;
 	}
 
-	command_list command_pool::allocate(VkCommandBufferLevel aLevel, uint32_t aCommandBufferCount) {
+	command_list command_pool::allocate(uint32_t aCommandBufferCount, VkCommandBufferLevel aLevel) {
 		command_list NewCommandList(aCommandBufferCount);
 		VkCommandBufferAllocateInfo AllocationInfo{};
 		AllocationInfo.sType				= VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;

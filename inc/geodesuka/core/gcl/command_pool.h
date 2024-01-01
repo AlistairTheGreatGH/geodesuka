@@ -31,15 +31,15 @@ namespace geodesuka::core::gcl {
 		std::mutex Mutex;
 
 		command_pool();
-		command_pool(context* aContext, int aFlags, uint32_t aQueueFamilyIndex);
-		command_pool(context* aContext, int aFlags, device::operation aDeviceOperation);
+		command_pool(context* aContext, uint32_t aQueueFamilyIndex, int aFlags = 0);
+		command_pool(context* aContext, device::operation aDeviceOperation, int aFlags = 0);
 		~command_pool();
 
 		// Creates a single command buffer from the chosen family support option.
-		VkCommandBuffer allocate(VkCommandBufferLevel aLevel);
+		VkCommandBuffer allocate(VkCommandBufferLevel aLevel = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
 		// Creates a series of command buffers from selected family support option.
-		command_list allocate(VkCommandBufferLevel aLevel, uint32_t aCommandBufferCount);
+		command_list allocate(uint32_t aCommandBufferCount, VkCommandBufferLevel aLevel = VK_COMMAND_BUFFER_LEVEL_PRIMARY);
 
 		// Destroys a single command buffer.
 		bool release(VkCommandBuffer aCommandBuffer);

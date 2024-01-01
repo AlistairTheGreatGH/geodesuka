@@ -14,24 +14,33 @@ namespace geodesuka::core::stage {
 
 	}
 
-	canvas::~canvas() {
-		// Will be used to clear out all windows.
-	}
+	canvas::~canvas() {}
 
 	canvas::canvas(gcl::context* aContext) : stage_t(aContext->parent_engine(), aContext) {
 
 	}
 
 	int canvas::id() {
-		return ID;
+		return 1;
 	}
 
-	std::vector<VkSubmitInfo> canvas::render() {
-		std::vector<VkSubmitInfo> StageRenderOperation;
-		for (size_t i = 0; i < this->Window.size(); i++) {
-			//StageRenderOperation += this->Window[i]->render(this);
+	object::render_target::render_info canvas::render() {
+		object::render_target::render_info SRO;
+		for (object::window* Wnd : Window) {
+			if (Wnd->FrameRateTimer.check_and_reset()) {
+				// Pull Next Frame Image
+				VkResult Result = Wnd->next_frame();
+				// Render Target Render entire stage.
+				std::vector<VkSubmitInfo> StageRender = Wnd->render(this);
+				// If system_window, get present info.
+				VkPresentInfoKHR PresentFrame = Wnd->present_frame();
+				// Append to stage render info.
+				//SRO.SubmitInfo.push_back(NextFrame);
+				SRO.SubmitInfo.insert(SRO.SubmitInfo.end(), StageRender.begin(), StageRender.end());
+				SRO.PresentInfo.push_back(PresentFrame);
+			}
 		}
-		return StageRenderOperation;
+		return SRO;
 	}
 
 }

@@ -14,6 +14,8 @@ namespace geodesuka::core::logic {
 		timer(double aDuration);
 		~timer();
 
+		timer& operator=(double aDuration);
+		
 		// Set signal wait duration.
 		void set(double aDuration);
 
@@ -31,8 +33,6 @@ namespace geodesuka::core::logic {
 
 		// Checks and resets timer.
 		bool check_and_reset();
-
-
 
 	private:
 

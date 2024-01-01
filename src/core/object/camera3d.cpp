@@ -175,29 +175,29 @@ namespace geodesuka::core::object {
 		//return UpdateInfo;
 	}
 
-	std::vector<VkSubmitInfo> camera3d::render(stage_t* aStage) {
-		std::vector<VkSubmitInfo> RenderBatch;
-		// Can only exist as a render target in Scene3D.
-		stage::scene3d* Scene3D = (stage::scene3d*)aStage;
-		object_list OpaqueObject;
-		object_list TransparentObject;
-		object_list TranslucentObject;
-		object_list SortedList(Scene3D->Object.count());
+	//std::vector<VkSubmitInfo> camera3d::render(stage_t* aStage) {
+	//	std::vector<VkSubmitInfo> RenderBatch;
+	//	// Can only exist as a render target in Scene3D.
+	//	stage::scene3d* Scene3D = (stage::scene3d*)aStage;
+	//	object_list OpaqueObject;
+	//	object_list TransparentObject;
+	//	object_list TranslucentObject;
+	//	object_list SortedList(Scene3D->Object.count());
 
-		// Prepares next frame for rendering operation by render target.
-		this->next_frame();
+	//	// Prepares next frame for rendering operation by render target.
+	//	this->next_frame();
 
-		// Seperate by transparency.
-		//assert(!this->RenderingGroup[this->FrameDrawIndex].resize(Scene3D->Object.count()));
-		for (int i = 0; i < Scene3D->Object.count(); i++) {
-			Scene3D->Object[i]->draw(this);
-		}
+	//	// Seperate by transparency.
+	//	//assert(!this->RenderingGroup[this->FrameDrawIndex].resize(Scene3D->Object.count()));
+	//	for (int i = 0; i < Scene3D->Object.count(); i++) {
+	//		Scene3D->Object[i]->draw(this);
+	//	}
 
-		// Yield command 
-		//RenderBatch = this->RenderingGroup[this->FrameDrawIndex].build();
+	//	// Yield command 
+	//	//RenderBatch = this->RenderingGroup[this->FrameDrawIndex].build();
 
-		return RenderBatch;
-	}
+	//	return RenderBatch;
+	//}
 
 	camera3d::geometry_buffer::geometry_buffer(context* aContext, math::vec2<uint> aResolution) {
 		VkResult Result = VK_SUCCESS;

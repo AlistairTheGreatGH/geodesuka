@@ -31,6 +31,11 @@ namespace geodesuka::core::logic {
 
 	timer::~timer() {}
 
+	timer& timer::operator=(double aDuration) {
+		this->set(aDuration);
+		return *this;
+	}
+
 	void timer::set(double aDuration) {
 		this->Mutex.lock();
 		this->Duration = aDuration;

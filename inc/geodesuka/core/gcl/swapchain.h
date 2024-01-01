@@ -64,6 +64,9 @@ namespace geodesuka::core::gcl {
         swapchain(context* aContext, VkSurfaceKHR aSurface, const property& aProperty, VkSwapchainKHR aOldSwapchain = VK_NULL_HANDLE);
         ~swapchain();
 
+		uint32_t image_count() const;
+		VkImageCreateInfo image_create_info() const;
+
 		VkSwapchainKHR handle();
 		const VkSwapchainKHR& handle() const;
 

@@ -25,10 +25,10 @@ void main() {
     vec4 v = Object.Orientation * vec4(VertexPosition, 1.0f);
     vec4 r = v + vec4(Object.Position, 1.0f);
     mat4 a = mat4(
-        1.0f / Window.Size.x, 0.0f, 0.0f, 0.0f,
-        0.0f, 1.0f / Window.Size.y, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 0.0f,
-        0.0f, 0.0f, 0.0f, 1.0f
+        1.0f / Window.Size.x,   0.0f,                   0.0f,               0.0f,
+        0.0f,                   1.0f / Window.Size.y,   0.0f,               0.0f,
+        0.0f,                   0.0f,                   1.0f,               0.0f,
+        0.0f,                   0.0f,                   0.0f,               1.0f
     );
 
     gl_Position = a * r;

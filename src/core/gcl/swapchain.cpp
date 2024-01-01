@@ -1,5 +1,7 @@
 #include <geodesuka/core/gcl/swapchain.h>
 
+#include <algorithm>
+
 namespace geodesuka::core::gcl {
 
     swapchain::property::property() {
@@ -56,7 +58,7 @@ namespace geodesuka::core::gcl {
 		CreateInfo.pNext					= NULL;
 		CreateInfo.flags					= 0;
 		CreateInfo.surface					= aSurface;
-		CreateInfo.minImageCount			= aProperty.FrameCount;
+		CreateInfo.minImageCount			= std::clamp(aProperty.FrameCount, SurfaceCapabilities.minImageCount, SurfaceCapabilities.maxImageCount);
 		CreateInfo.imageFormat				= (VkFormat)aProperty.PixelFormat;
 		CreateInfo.imageColorSpace			= (VkColorSpaceKHR)aProperty.ColorSpace;
 		CreateInfo.imageExtent				= SurfaceCapabilities.currentExtent;
@@ -81,6 +83,32 @@ namespace geodesuka::core::gcl {
     swapchain::~swapchain() {
         vkDestroySwapchainKHR(this->Context->handle(), this->Handle, NULL);
     }
+
+	uint32_t swapchain::image_count() const {
+		uint32_t ImageCount = 0;
+		VkResult Result = vkGetSwapchainImagesKHR(this->Context->handle(), this->Handle, &ImageCount, NULL);
+		return ImageCount;
+	}
+
+	VkImageCreateInfo swapchain::image_create_info() const {
+		VkImageCreateInfo ImageCreateInfo{};
+		ImageCreateInfo.sType					= VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+		ImageCreateInfo.pNext					= NULL;
+		ImageCreateInfo.flags					= 0;
+		ImageCreateInfo.imageType				= VK_IMAGE_TYPE_2D;
+		ImageCreateInfo.format					= CreateInfo.imageFormat;
+		ImageCreateInfo.extent					= { CreateInfo.imageExtent.width, CreateInfo.imageExtent.height, 1u };
+		ImageCreateInfo.mipLevels				= 1;
+		ImageCreateInfo.arrayLayers				= CreateInfo.imageArrayLayers;
+		ImageCreateInfo.samples					= (VkSampleCountFlagBits)image::sample::COUNT_1;
+		ImageCreateInfo.tiling					= (VkImageTiling)image::tiling::OPTIMAL;
+		ImageCreateInfo.usage					= CreateInfo.imageUsage;
+		ImageCreateInfo.sharingMode				= CreateInfo.imageSharingMode;
+		ImageCreateInfo.queueFamilyIndexCount	= 0;
+		ImageCreateInfo.pQueueFamilyIndices		= NULL;
+		ImageCreateInfo.initialLayout			= (VkImageLayout)image::LAYOUT_UNDEFINED;
+		return ImageCreateInfo;
+	}
 
 	VkSwapchainKHR swapchain::handle() { 
 		return this->Handle;

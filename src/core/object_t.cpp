@@ -78,7 +78,7 @@ namespace geodesuka::core {
 		// Creates command buffers for render operation.
 		this->DrawCommand.resize(aCamera3D->Frame.size());
 		for (size_t i = 0; i < aCamera3D->Frame.size(); i++) {
-			this->DrawCommand[i] = aCamera3D->CommandPool.allocate(VK_COMMAND_BUFFER_LEVEL_PRIMARY, aObject->Model->command_buffer_count());
+			this->DrawCommand[i] = aCamera3D->CommandPool->allocate(aObject->Model->command_buffer_count());
 		}
 
 		//for (size_t i = 0; i < aCamera3D->Frame.size(); i++) {
@@ -176,37 +176,33 @@ namespace geodesuka::core {
 	}
 
 	void object_t::predraw(object::render_target* aRenderTarget) {
-		graphics::render_operation* NewRenderOperation = nullptr;
 		switch (aRenderTarget->id()) {
 		default:
 			break;
 		case object::system_window::ID:
 		case object::virtual_window::ID:
 		// Check if object is a render target, the swap render ops.
-			NewRenderOperation = new default_renderer(
+			RenderOperation[aRenderTarget] = new default_renderer(
 				Context,
 				(object::window*)aRenderTarget,
 				this
 			);
 			break;
 		case object::camera2d::ID:
-			NewRenderOperation = new default_renderer(
+			RenderOperation[aRenderTarget] = new default_renderer(
 				Context,
 				(object::camera2d*)aRenderTarget,
 				this
 			);
 			break;
 		case object::camera3d::ID:
-			NewRenderOperation = new default_renderer(
+			RenderOperation[aRenderTarget] = new default_renderer(
 				Context,
 				(object::camera3d*)aRenderTarget,
 				this
 			);
 			break;
 		}
-
-		assert(NewRenderOperation);
-		this->RenderOperation.insert(std::make_pair(aRenderTarget, NewRenderOperation));
 	}
 
 	void object_t::operator-=(object::render_target* aRenderTarget) {
@@ -250,9 +246,10 @@ namespace geodesuka::core {
 		InputForce		= math::vec3<float>(0.0, 0.0, 0.0);
 
 		Mass			= 1.0;
-		Time			= logic::get_time();
+		Time			= 0.0;
 		Position		= math::vec3<float>(0.0, 0.0, 0.0);
 		Momentum		= math::vec3<float>(0.0, 0.0, 0.0);
+		AngularMomentum = math::vec3<float>(0.0, 0.0, 0.0);
 		Force			= math::vec3<float>(0.0, 0.0, 0.0);
 		DirectionX		= math::vec3<float>(1.0, 0.0, 0.0);
 		DirectionY		= math::vec3<float>(0.0, 1.0, 0.0);

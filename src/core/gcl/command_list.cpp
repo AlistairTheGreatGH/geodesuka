@@ -11,7 +11,23 @@
 
 namespace geodesuka::core::gcl {
 
-	command_list::command_list() { }
+	command_list::command_list() {}
+
+	command_list::command_list(VkCommandBuffer aCommandBuffer) {
+		this->Handle.push_back(aCommandBuffer);
+	}
+
+	command_list::command_list(uint32_t aCommandBufferCount) {
+		this->Handle.resize(aCommandBufferCount);
+		for (size_t i = 0; i < this->Handle.size(); i++) {
+			this->Handle[i] = VK_NULL_HANDLE;
+		}
+	}
+
+	command_list::command_list(uint32_t aCommandBufferCount, VkCommandBuffer* aCommandBufferList) {
+		this->Handle.resize(aCommandBufferCount);
+		memcpy(this->Handle.data(), aCommandBufferList, aCommandBufferCount * sizeof(VkCommandBuffer));
+	}
 
 	command_list::~command_list() {
 		for (size_t i = 0; i < this->WaitSemaphore.size(); i++) {
@@ -77,22 +93,6 @@ namespace geodesuka::core::gcl {
 		SubmissionBuild.signalSemaphoreCount	= this->SignalSemaphore.size();
 		SubmissionBuild.pSignalSemaphores		= this->SignalSemaphore.data();
 		return SubmissionBuild;
-	}
-
-	command_list::command_list(VkCommandBuffer aCommandBuffer) {
-		this->Handle.push_back(aCommandBuffer);
-	}
-
-	command_list::command_list(uint32_t aCommandBufferCount) {
-		this->Handle.resize(aCommandBufferCount);
-		for (size_t i = 0; i < this->Handle.size(); i++) {
-			this->Handle[i] = VK_NULL_HANDLE;
-		}
-	}
-
-	command_list::command_list(uint32_t aCommandBufferCount, VkCommandBuffer* aCommandBufferList) {
-		this->Handle.resize(aCommandBufferCount);
-		memcpy(this->Handle.data(), aCommandBufferList, aCommandBufferCount * sizeof(VkCommandBuffer));
 	}
 
 	std::vector<VkSubmitInfo> convert(const std::vector<command_list>& aCommandList) {

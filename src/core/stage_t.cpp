@@ -19,24 +19,22 @@ namespace geodesuka::core {
 		}
 		OwnedObject.clear();
 		Context = nullptr;
+
 	}
 
 	// Base constructor.
 	stage_t::stage_t(engine* aEngine, gcl::context* aContext) {
-		Context					= aContext;
+		Context	= aContext;
 	}
 
-	void stage_t::generate_render_operations() {
-		for (int i = 0; i < this->Object.count(); i++) {
-			//this->Object[i]->generate_render_operations(this);
-		}
+	void stage_t::update(double aDeltaTime) {}
+
+	void stage_t::collision(double aDeltaTime) {
+
+		// Collision Math Done here.
+
+
 	}
-
-	void stage_t::update(double aDeltaTime) {
-
-	}
-
-	void stage_t::collision(double aDeltaTime) {}
 
 	VkSubmitInfo stage_t::transfer() {
 		VkSubmitInfo TransferBatch{};
@@ -64,28 +62,6 @@ namespace geodesuka::core {
 		ComputeBatch.signalSemaphoreCount	= 0;
 		ComputeBatch.pSignalSemaphores		= NULL;
 		return ComputeBatch;
-	}
-
-	std::vector<VkSubmitInfo> stage_t::render() {
-		VkSubmitInfo Submission{};
-		std::vector<VkSubmitInfo> RenderList;
-
-
-		//this->Mutex.lock();
-		//for (int i = 0; i < this->RenderTarget.count(); i++) {
-		//	// Type casts render target, for readability.
-		//	object::render_target* RenderTarget = (object::render_target*)this->RenderTarget[i];
-		//
-		//	// Will be called if render_target is ready to be drawn.
-		//	if ((RenderTarget->State == object_t::state::READY) && (RenderTarget->render_signal()))
-		//		RenderBatch += RenderTarget->render(this);
-		//}
-		//this->Mutex.unlock();
-		return RenderList;
-	}
-
-	std::vector<VkPresentInfoKHR> stage_t::present() {
-		return std::vector<VkPresentInfoKHR>(0);
 	}
 
 }

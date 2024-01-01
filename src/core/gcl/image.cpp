@@ -650,37 +650,39 @@ namespace geodesuka::core::gcl {
 		aInput.CreateInfo.extent.width, aInput.CreateInfo.extent.height, aInput.CreateInfo.extent.depth, aInput.CreateInfo.arrayLayers, 
 		NULL
 	) {
-		std::vector<VkImageCopy> RegionList;
-		for (uint32_t i = 0; i < aInput.CreateInfo.mipLevels; i++) {
+		VkResult Result = VK_SUCCESS;
+		std::vector<VkImageCopy> RegionList(this->CreateInfo.mipLevels);
+		VkExtent3D d = { aInput.CreateInfo.extent.width, aInput.CreateInfo.extent.height, aInput.CreateInfo.extent.depth };
+		for (uint32_t i = 0; i < this->CreateInfo.mipLevels; i++) {
 			VkImageCopy Region;
-			Region.srcSubresource.aspectMask				= VK_IMAGE_ASPECT_COLOR_BIT;
+			Region.srcSubresource.aspectMask				= aspect_flag(this->CreateInfo.format);
 			Region.srcSubresource.mipLevel					= i;
 			Region.srcSubresource.baseArrayLayer			= 0;
 			Region.srcSubresource.layerCount				= aInput.CreateInfo.arrayLayers;
 			Region.srcOffset								= { 0, 0, 0 };
-			Region.srcSubresource.aspectMask				= VK_IMAGE_ASPECT_COLOR_BIT;
+			Region.srcSubresource.aspectMask				= aspect_flag(this->CreateInfo.format);
 			Region.srcSubresource.mipLevel					= i;
 			Region.srcSubresource.baseArrayLayer			= 0;
 			Region.srcSubresource.layerCount				= aInput.CreateInfo.arrayLayers;
 			Region.dstOffset								= { 0, 0, 0 };
-			Region.extent									= { aInput.CreateInfo.extent.width, aInput.CreateInfo.extent.height, aInput.CreateInfo.extent.depth };
+			Region.extent									= { (d.width >> i) ? d.width >> i : 1, (d.height >> i) ? d.height >> i : 1, (d.depth >> i) ? d.depth >> i : 1 };
 			RegionList.push_back(Region);
 		}
 
 		// Copy the image.
-		this->copy(aInput, RegionList);
-
+		Result = this->copy(aInput, RegionList);
 	}
 
 	// Move Constructor.
 	image::image(image&& aInput) noexcept {
-		this->Context = aInput.Context;
+		this->Context 		= aInput.Context;
 		
-		this->CreateInfo = aInput.CreateInfo;
-		this->Handle = aInput.Handle;
+		this->CreateInfo 	= aInput.CreateInfo;
+		this->Handle 		= aInput.Handle;
 
-		this->MemoryType = aInput.MemoryType;
-		this->MemoryHandle = aInput.MemoryHandle;
+		this->MemoryType 	= aInput.MemoryType;
+		this->MemoryHandle 	= aInput.MemoryHandle;
+		aInput.zero_out();
 	}
 
 	// Destructor
@@ -690,13 +692,23 @@ namespace geodesuka::core::gcl {
 
 	// Copy Assignment.
 	image& image::operator=(image& aRhs) {
-
+		if (this == &aRhs) return *this;
+		this->clear();
+		*this = image(aRhs);
 		return *this;
 	}
 
 	// Move Assignment.
 	image& image::operator=(image&& aRhs) noexcept {
 		this->clear();
+		this->Context 		= aRhs.Context;
+
+		this->CreateInfo 	= aRhs.CreateInfo;
+		this->Handle 		= aRhs.Handle;
+
+		this->MemoryType 	= aRhs.MemoryType;
+		this->MemoryHandle 	= aRhs.MemoryHandle;
+		aRhs.zero_out();
 		return *this;
 	}
 
@@ -1034,6 +1046,56 @@ namespace geodesuka::core::gcl {
 		}
 
 		return Result;
+	}
+
+	VkImageView image::view(
+		uint32_t aMipLevel, uint32_t aMipLevelCount,
+		uint32_t aArrayLayerStart, uint32_t aArrayLayerCount
+	) const {
+		VkResult Result = VK_SUCCESS;
+		VkImageViewCreateInfo IVCI{};
+		VkImageView IV = VK_NULL_HANDLE;
+		IVCI.sType								= VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		IVCI.pNext								= NULL;
+		IVCI.flags								= 0;
+		IVCI.image								= this->Handle;
+		switch(CreateInfo.imageType) {
+		case VK_IMAGE_TYPE_1D:
+			IVCI.viewType 							= VK_IMAGE_VIEW_TYPE_1D;
+			break;
+		case VK_IMAGE_TYPE_2D:
+			IVCI.viewType 							= VK_IMAGE_VIEW_TYPE_2D;
+			break;
+		case VK_IMAGE_TYPE_3D:
+			IVCI.viewType 							= VK_IMAGE_VIEW_TYPE_3D;
+			break;
+		default:
+			IVCI.viewType 							= VK_IMAGE_VIEW_TYPE_MAX_ENUM;
+			break;
+		}
+		IVCI.format								= CreateInfo.format;
+		IVCI.components							= { VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A };
+		IVCI.subresourceRange.aspectMask		= aspect_flag(CreateInfo.format);
+		IVCI.subresourceRange.baseMipLevel		= aMipLevel;
+		IVCI.subresourceRange.levelCount		= std::min(aMipLevelCount, CreateInfo.mipLevels - aMipLevel);
+		IVCI.subresourceRange.baseArrayLayer	= aArrayLayerStart;
+		IVCI.subresourceRange.layerCount		= std::min(aArrayLayerCount, CreateInfo.arrayLayers - aArrayLayerStart);
+		Result = vkCreateImageView(this->Context->handle(), &IVCI, NULL, &IV);
+		return IV;
+	}
+
+	VkAttachmentDescription image::desc(layout aStartingLayout, layout aEndingLayout) const {
+		VkAttachmentDescription AD{};
+		AD.flags			= 0;
+		AD.format			= this->CreateInfo.format;
+		AD.samples			= this->CreateInfo.samples;
+		AD.loadOp			= VK_ATTACHMENT_LOAD_OP_LOAD;
+		AD.storeOp			= VK_ATTACHMENT_STORE_OP_STORE;
+		AD.stencilLoadOp	= VK_ATTACHMENT_LOAD_OP_CLEAR;
+		AD.stencilStoreOp	= VK_ATTACHMENT_STORE_OP_STORE;
+		AD.initialLayout	= (VkImageLayout)aStartingLayout;
+		AD.finalLayout		= (VkImageLayout)aEndingLayout;
+		return AD;
 	}
 
 	VkImageMemoryBarrier image::memory_barrier(

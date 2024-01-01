@@ -85,7 +85,8 @@
         "xloctime": "cpp",
         "xmemory": "cpp",
         "xtr1common": "cpp",
-        "xtree": "cpp"
+        "xtree": "cpp",
+        "filesystem": "cpp"
     },
     "dotnet.defaultSolution": "geodesuka.sln",
     "cmake.configureOnOpen": false

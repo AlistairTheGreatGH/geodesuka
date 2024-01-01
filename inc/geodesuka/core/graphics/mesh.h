@@ -11,11 +11,6 @@ namespace geodesuka::core::graphics {
 	class mesh : public physics::mesh {
 	public:
 
-		gcl::context* 				Context;
-		gcl::buffer 				VertexBuffer;
-		std::vector<gcl::buffer> 	IndexBuffer;
-		gcl::buffer 				BoneBuffer;
-
 		enum primitive {
 			TRIANGLE	,
 			QUAD		,
@@ -26,49 +21,61 @@ namespace geodesuka::core::graphics {
 		};
 
 		struct vertex {
-			math::vec3<float> 	Position;
-			math::vec3<float> 	Normal;
-			math::vec3<float> 	Tangent;
-			math::vec3<float> 	Bitangent;
-			// Mesh Texturing & Coloring.
-			math::vec2<float> 	TextureCoordinate; // Texture data should be associated with index data, not vertex data...
-			math::vec4<float> 	Color;
-			// Mesh Animation.
-			math::vec4<uint> 	BoneID;
-			math::vec4<float> 	BoneWeight;
+			math::vec3<float> 		Position;
+			math::vec3<float> 		Normal;
+			math::vec3<float> 		Tangent;
+			math::vec3<float> 		Bitangent;
+			math::vec4<uint> 		BoneID;
+			math::vec4<float> 		BoneWeight;
+			math::vec3<float> 		TextureCoordinate[8];
+			math::vec4<float> 		Color[8];
 			vertex();
 		};
 
+		struct uv {
+			// math::vec2<float> 		TextureCoordinate;
+			// math::vec4<float> 		Color;
+		};
+
 		struct face {
-			VkIndexType 			IndexType;
-			std::vector<ushort>		H16;
-			std::vector<uint>		H32;
+			VkIndexType 				IndexType;
+			std::vector<ushort>			H16;
+			std::vector<uint>			H32;
 		};
 
 		struct bone {
 			struct vertex_weight {
-				uint					ID;
-				float					Weight;
+				uint						ID;
+				float						Weight;
 			};
-			util::string			Name;
-			uint					VertexCount;
-			vertex_weight*			Vertex;
+			util::string				Name;
+			std::vector<vertex_weight>	Vertex;
 		};
 
-		float 					BoundingRadius;
-		std::vector<vertex> 	Vertex;
-		std::vector<face> 		Face;
-		std::vector<bone> 		Bone;
+		// Host Memory Data.
+		float 						BoundingRadius;
+		std::vector<vertex> 		Vertex;
+		std::vector<face> 			Face;
+		std::vector<bone> 			Bone;
+		gcl::buffer 				VertexBuffer;
+		std::vector<gcl::buffer> 	IndexBuffer;
+		gcl::buffer 				BoneBuffer;
 
 		mesh();
-		mesh(size_t aVertexCount, vertex* aVertex, size_t aIndexCount, ushort* aIndex);
-		mesh(size_t aVertexCount, vertex* aVertex, size_t aIndexCount, uint* aIndex);
+		mesh(const std::vector<vertex>& aVertexData, const std::vector<ushort>& aIndexData);
+		mesh(const std::vector<vertex>& aVertexData, const std::vector<uint>& aIndexData);
+		~mesh();
 
 		vertex operator[](size_t aIndex) const;
 		vertex& operator[](size_t aIndex);
 
 		//
 		void recenter();
+
+	private:
+
+		void clear();
+		void zero_out();
 
 	};
 

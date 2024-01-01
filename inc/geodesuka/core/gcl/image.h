@@ -418,6 +418,13 @@ namespace geodesuka::core::gcl {
 		VkResult read(VkOffset3D aSourceOffset, uint32_t aSourceArrayLayer, void* aDestinationData, size_t aDestinationOffset, VkExtent3D aSourceExtent, uint32_t aSourceArrayLayerCount = UINT32_MAX);
 		VkResult read(void* aDestinationData, std::vector<VkBufferImageCopy> aRegionList);
 
+		VkImageView view(
+			uint32_t aMipLevel = 0, uint32_t aMipLevelCount = UINT32_MAX,
+			uint32_t aArrayLayerStart = 0, uint32_t aArrayLayerCount = UINT32_MAX
+		) const;
+
+		VkAttachmentDescription desc(layout aStartingLayout, layout aEndingLayout) const;
+
 		VkImageMemoryBarrier memory_barrier(
 			uint aSrcAccess, uint aDstAccess,
 			uint aOldLayout, uint aNewLayout,
@@ -439,9 +446,6 @@ namespace geodesuka::core::gcl {
 		// Memory Handle Info
 		uint 											MemoryType;
 		VkDeviceMemory 									MemoryHandle;
-
-		// Generated Mipmap levels
-		// std::vector<VkOffset3D> 						Extent;
 
 		void zero_out();
 		void clear();

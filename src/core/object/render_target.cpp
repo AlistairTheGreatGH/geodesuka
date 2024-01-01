@@ -21,62 +21,37 @@ namespace geodesuka::core::object {
 		this->Buffer = VK_NULL_HANDLE;
 	}
 
-	render_target::~render_target() {
-
-	}
-
-	bool render_target::refresh_signal() {
-		return false;
-	}
-
-	bool render_target::render_signal() {
-		return FrameRateTimer.check_and_reset();
-	}
-
-	// This is an example method of rendering a stage. Can be overriden.
-	std::vector<VkSubmitInfo> render_target::render(stage_t* aStage) {
-		std::vector<VkSubmitInfo> RenderBatch;
-		this->Mutex.lock();
-
-		// Prepares next frame for rendering operation by render target.
-		this->next_frame();
-
-		// Use next_frame semaphore to pause render operations until
-		//RenderBatch += this->draw(aStage->Object);
-
-		// Use Submission Semaphore to hold present.
-		//RenderBatch += this->present_frame();
-
-		this->Mutex.unlock();
-		return RenderBatch;
-	}
+	render_target::~render_target() {}
 
 	// Does a simple iteration to the next available frame.
 	VkResult render_target::next_frame() {
 		this->FrameReadIndex = this->FrameDrawIndex;
 		this->FrameDrawIndex = ((this->FrameDrawIndex == (this->Frame.size() - 1)) ? 0 : (this->FrameDrawIndex + 1));
 		return VK_SUCCESS;
-	}
-
-	std::vector<gcl::command_list> render_target::draw(const std::vector<object_t*>& aObject) {
-		std::vector<gcl::command_list> DrawCommand(aObject.size());
-		for (size_t i = 0; i < aObject.size(); i++) {
-			DrawCommand[i] = aObject[i]->draw(this);
-		}
-		return DrawCommand;
+		// VkSubmitInfo SubmitInfo{};
+		// SubmitInfo.sType					= VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		// SubmitInfo.pNext					= NULL;
+		// SubmitInfo.waitSemaphoreCount		= 0;
+		// SubmitInfo.pWaitSemaphores			= NULL;
+		// SubmitInfo.pWaitDstStageMask		= NULL;
+		// SubmitInfo.commandBufferCount		= 1;
+		// SubmitInfo.pCommandBuffers			= &Frame[FrameDrawIndex].ClearScreen;
+		// SubmitInfo.signalSemaphoreCount		= 0;
+		// SubmitInfo.pSignalSemaphores		= NULL;
+		// return SubmitInfo;
 	}
 
 	// Is left empty, because it is not used for anything besides system_window.
 	VkPresentInfoKHR render_target::present_frame() {
 		VkPresentInfoKHR PresentInfo{};
-		PresentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-		PresentInfo.pNext = NULL;
-		PresentInfo.waitSemaphoreCount = 0;
-		PresentInfo.pWaitSemaphores = NULL;
-		PresentInfo.swapchainCount = 0;
-		PresentInfo.pSwapchains = NULL;
-		PresentInfo.pImageIndices = NULL;
-		PresentInfo.pResults = NULL;
+		PresentInfo.sType 					= VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		PresentInfo.pNext 					= NULL;
+		PresentInfo.waitSemaphoreCount 		= 0;
+		PresentInfo.pWaitSemaphores 		= NULL;
+		PresentInfo.swapchainCount 			= 0;
+		PresentInfo.pSwapchains 			= NULL;
+		PresentInfo.pImageIndices 			= NULL;
+		PresentInfo.pResults 				= NULL;
 		return PresentInfo;
 	}
 
@@ -120,38 +95,35 @@ namespace geodesuka::core::object {
 	}
 
 	render_target::render_target(gcl::context* aContext, stage_t* aStage, const char* aName, math::vec3<uint> aFrameResolution, double aFrameRate, uint32_t aFrameCount, uint32_t aAttachmentCount) :
-		object_t(aContext, aStage, aName),
-		CommandPool(aContext, 0, gcl::device::operation::GRAPHICS_AND_COMPUTE)
+		object_t(aContext, aStage, aName)
 	{
-		this->FrameRate						= aFrameRate;
-		this->FrameResolution				= aFrameResolution;
-		this->AttachmentDescription.resize(aAttachmentCount);
-		this->FrameReadIndex				= 0;
-		this->FrameDrawIndex				= 0;
-		for (size_t i = 0; i < aFrameCount; i++) {
-			this->Frame.emplace_back(aAttachmentCount);
+		CommandPool 			= new gcl::command_pool(aContext, gcl::device::operation::GRAPHICS_AND_COMPUTE);
+		FrameRate 				= aFrameRate;
+		FrameRateTimer 			= 1.0 / aFrameRate;
+		FrameResolution 		= aFrameResolution;
+		FrameReadIndex			= 0;
+		FrameDrawIndex			= 0;
+		Frame 					= std::vector<frame>(aFrameCount);
+		for (frame& Frm : Frame) {
+			Frm = frame(aAttachmentCount);
 		}
-		this->FrameRateTimer.set(1.0 / aFrameRate);
-		this->RenderPass 						= VK_NULL_HANDLE;
+		AttachmentDescription 	= std::vector<VkAttachmentDescription>(aAttachmentCount);
 
-		// Viewport
-		VkViewport	DefaultViewport;
-		VkRect2D DefaultScissor;
+		DefaultViewport.x					= 0.0f;
+		DefaultViewport.y					= 0.0f;
+		DefaultViewport.width				= this->FrameResolution.x;
+		DefaultViewport.height				= this->FrameResolution.y;
+		DefaultViewport.minDepth			= 0.0f;// +1.0f;
+		DefaultViewport.maxDepth			= 1.0f;// -1.0f;
+		DefaultScissor.offset.x				= 0;
+		DefaultScissor.offset.y				= 0;
+		DefaultScissor.extent.width			= this->FrameResolution.x;
+		DefaultScissor.extent.height		= this->FrameResolution.y;
+		RenderArea.offset.x					= 0;
+		RenderArea.offset.y					= 0;
+		RenderArea.extent.width				= this->FrameResolution.x;
+		RenderArea.extent.height			= this->FrameResolution.y;
 
-		this->DefaultViewport.x						= 0.0f;
-		this->DefaultViewport.y						= 0.0f;
-		this->DefaultViewport.width					= this->FrameResolution.x;
-		this->DefaultViewport.height				= this->FrameResolution.y;
-		this->DefaultViewport.minDepth				= 0.0f;// +1.0f;
-		this->DefaultViewport.maxDepth				= 1.0f;// -1.0f;
-		this->DefaultScissor.offset.x				= 0;
-		this->DefaultScissor.offset.y				= 0;
-		this->DefaultScissor.extent.width			= this->FrameResolution.x;
-		this->DefaultScissor.extent.height			= this->FrameResolution.y;
-		this->RenderArea.offset.x					= 0;
-		this->RenderArea.offset.y					= 0;
-		this->RenderArea.extent.width				= this->FrameResolution.x;
-		this->RenderArea.extent.height				= this->FrameResolution.y;
 	}
 
 	VkResult render_target::create_framebuffers() {

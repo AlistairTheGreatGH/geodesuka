@@ -54,26 +54,28 @@ namespace geodesuka::core::gcl {
 		CreateInfo.queueFamilyIndexCount		= 0;
 		CreateInfo.pQueueFamilyIndices			= NULL;
 
-		// Create Buffer Object
-		Result = vkCreateBuffer(Context->handle(), &CreateInfo, NULL, &Handle);
+		if (Context != nullptr) {
+			// Create Buffer Object
+			Result = vkCreateBuffer(Context->handle(), &CreateInfo, NULL, &Handle);
 
-		// Get Memory Requirements for Buffer.
-		VkMemoryRequirements MemoryRequirements = this->memory_requirements();
+			// Get Memory Requirements for Buffer.
+			VkMemoryRequirements MemoryRequirements = this->memory_requirements();
 
-		// Allocate memory for buffer.
-		MemoryType = aMemoryType;
-		MemoryHandle = Context->allocate_memory(MemoryRequirements, aMemoryType);
+			// Allocate memory for buffer.
+			MemoryType = aMemoryType;
+			MemoryHandle = Context->allocate_memory(MemoryRequirements, aMemoryType);
 
-		// Bind Buffer to allocated Memory.
-		Result = vkBindBufferMemory(this->Context->handle(), this->Handle, this->MemoryHandle, 0);
+			// Bind Buffer to allocated Memory.
+			Result = vkBindBufferMemory(this->Context->handle(), this->Handle, this->MemoryHandle, 0);
 
-		// Write data to buffer object.
-		if (aBufferData != NULL) {
-			this->write(0, aBufferData, 0, aBufferSize);
+			// Write data to buffer object.
+			if (aBufferData != NULL) {
+				this->write(0, aBufferData, 0, aBufferSize);
+			}
 		}
 	}
 
-	buffer::buffer(buffer& aInput) : buffer(aInput.Context, aInput.MemoryType, aInput.CreateInfo.usage, aInput.CreateInfo.size, NULL) {
+	buffer::buffer(const buffer& aInput) : buffer(aInput.Context, aInput.MemoryType, aInput.CreateInfo.usage, aInput.CreateInfo.size, NULL) {
 		this->copy(0, aInput, 0, aInput.CreateInfo.size);
 	}
 
@@ -91,16 +93,18 @@ namespace geodesuka::core::gcl {
 	}
 
 	// TODO: Optimize for memory recycling.
-	buffer& buffer::operator=(buffer& aRhs) {
+	buffer& buffer::operator=(const buffer& aRhs) {
 		if (this == &aRhs) return *this;
 
 		VkResult Result = VK_SUCCESS;
 
 		this->clear();
 
-		*this = buffer(aRhs.Context, aRhs.MemoryType, aRhs.CreateInfo.usage, aRhs.CreateInfo.size, NULL);
+		if (aRhs.Context != nullptr) {
+			*this = buffer(aRhs.Context, aRhs.MemoryType, aRhs.CreateInfo.usage, aRhs.CreateInfo.size, NULL);
 
-		Result = this->copy(0, aRhs, 0, aRhs.CreateInfo.size);
+			Result = this->copy(0, aRhs, 0, aRhs.CreateInfo.size);
+		}
 
 		return *this;
 	}
@@ -116,7 +120,7 @@ namespace geodesuka::core::gcl {
 		return *this;
 	}
 
-	void buffer::copy(VkCommandBuffer aCommandBuffer, size_t aDestinationOffset, buffer& aSourceData, size_t aSourceOffset, size_t aRegionSize) {
+	void buffer::copy(VkCommandBuffer aCommandBuffer, size_t aDestinationOffset, const buffer& aSourceData, size_t aSourceOffset, size_t aRegionSize) {
 		VkBufferCopy Region{};
 		Region.srcOffset		= aSourceOffset;
 		Region.dstOffset		= aDestinationOffset;
@@ -126,11 +130,11 @@ namespace geodesuka::core::gcl {
 		this->copy(aCommandBuffer, aSourceData, RegionList);
 	}
 
-	void buffer::copy(VkCommandBuffer aCommandBuffer, buffer& aSourceData, std::vector<VkBufferCopy> aRegionList) {
+	void buffer::copy(VkCommandBuffer aCommandBuffer, const buffer& aSourceData, std::vector<VkBufferCopy> aRegionList) {
 		vkCmdCopyBuffer(aCommandBuffer, aSourceData.Handle, this->Handle, aRegionList.size(), aRegionList.data());
 	}
 
-	void buffer::copy(VkCommandBuffer aCommandBuffer, size_t aDestinationOffset, image& aSourceData, VkOffset3D aSourceOffset, uint32_t aSourceArrayLayer, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount) {
+	void buffer::copy(VkCommandBuffer aCommandBuffer, size_t aDestinationOffset, const image& aSourceData, VkOffset3D aSourceOffset, uint32_t aSourceArrayLayer, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount) {
 		VkBufferImageCopy Region {};
 		Region.bufferOffset						= aDestinationOffset;
 		Region.bufferRowLength					= 0;
@@ -143,7 +147,7 @@ namespace geodesuka::core::gcl {
 		this->copy(aCommandBuffer, aSourceData, RegionList);
 	}
 
-	void buffer::copy(VkCommandBuffer aCommandBuffer, image& aSourceData, std::vector<VkBufferImageCopy> aRegionList) {
+	void buffer::copy(VkCommandBuffer aCommandBuffer, const image& aSourceData, std::vector<VkBufferImageCopy> aRegionList) {
 		vkCmdCopyImageToBuffer(
 			aCommandBuffer, 
 			aSourceData.Handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, 
@@ -152,7 +156,7 @@ namespace geodesuka::core::gcl {
 		);
 	}
 	
-	VkResult buffer::copy(size_t aDestinationOffset, buffer& aSourceData, size_t aSourceOffset, size_t aRegionSize) {
+	VkResult buffer::copy(size_t aDestinationOffset, const buffer& aSourceData, size_t aSourceOffset, size_t aRegionSize) {
 		VkBufferCopy Region{};
 		Region.srcOffset		= aSourceOffset;
 		Region.dstOffset		= aDestinationOffset;
@@ -162,7 +166,7 @@ namespace geodesuka::core::gcl {
 		return this->copy(aSourceData, RegionList);
 	}
 
-	VkResult buffer::copy(buffer& aSourceData, std::vector<VkBufferCopy> aRegionList) {
+	VkResult buffer::copy(const buffer& aSourceData, std::vector<VkBufferCopy> aRegionList) {
 		VkResult Result = VK_SUCCESS;
 		VkCommandBuffer CommandBuffer = Context->create_command_buffer(device::operation::TRANSFER);
 		Result = Context->begin(CommandBuffer);
@@ -173,7 +177,7 @@ namespace geodesuka::core::gcl {
 		return Result;
 	}
 
-	VkResult buffer::copy(size_t aDestinationOffset, image& aSourceData, VkOffset3D aSourceOffset, uint32_t aSourceArrayLayer, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount) {
+	VkResult buffer::copy(size_t aDestinationOffset, const image& aSourceData, VkOffset3D aSourceOffset, uint32_t aSourceArrayLayer, VkExtent3D aRegionExtent, uint32_t aArrayLayerCount) {
 		VkBufferImageCopy Region{};
 		Region.bufferOffset						= aDestinationOffset;
 		Region.bufferRowLength					= 0;
@@ -188,7 +192,7 @@ namespace geodesuka::core::gcl {
 		return this->copy(aSourceData, RegionList);
 	}
 
-	VkResult buffer::copy(image& aSourceData, std::vector<VkBufferImageCopy> aRegionList) {
+	VkResult buffer::copy(const image& aSourceData, std::vector<VkBufferImageCopy> aRegionList) {
 		VkResult Result = VK_SUCCESS;
 		VkCommandBuffer CommandBuffer = Context->create_command_buffer(device::operation::TRANSFER);
 		Result = Context->begin(CommandBuffer);

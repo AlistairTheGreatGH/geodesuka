@@ -23,6 +23,11 @@ namespace geodesuka::core {
 
 		friend class geodesuka::engine;
 
+		struct render_info {
+			std::vector<VkSubmitInfo> GraphicsAndCompute;
+			std::vector<VkPresentInfoKHR> Presentation;
+		};
+
 		std::atomic<bool>				ExitApp;
 
 		virtual ~app() = default;
@@ -39,7 +44,7 @@ namespace geodesuka::core {
 		size_t 							AppThreadCount;
 		stage_list						Stage;
 
-		app(engine* aEngine);
+		app(engine* aEngine, double aTimeStep, const char* aName, version aVersion);
 
 		virtual void run() = 0;
 
@@ -49,8 +54,7 @@ namespace geodesuka::core {
 		void update(double aDeltaTime);
 		std::map<gcl::context*, std::vector<VkSubmitInfo>> gather_transfer_operations();
 		std::map<gcl::context*, std::vector<VkSubmitInfo>> gather_compute_operations();
-		std::map<gcl::context*, std::vector<VkSubmitInfo>> gather_graphics_and_compute_operations();
-		std::map<gcl::context*, std::vector<VkPresentInfoKHR>> gather_presentation_operations();
+		std::map<gcl::context*, render_info> render();
 
 	};
 

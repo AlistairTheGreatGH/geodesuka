@@ -27,6 +27,7 @@
 
 #include "object_t.h"
 #include "object_list.h"
+#include "object/render_target.h"
 
 namespace geodesuka::core {
 
@@ -35,18 +36,9 @@ namespace geodesuka::core {
 
 		friend class geodesuka::core::app;
 
-		enum state {
-			FAILURE = -1,
-			CREATION,
-			READY,
-			DESTRUCTION
-		};
-
-
-		std::mutex						Mutex;
-		gcl::context*					Context;
-		object_list						Object;
-
+		std::mutex 		Mutex;
+		gcl::context* 	Context;
+		object_list 	Object;
 
 		~stage_t();
 
@@ -60,10 +52,6 @@ namespace geodesuka::core {
 
 		stage_t(engine* aEngine, gcl::context* aContext);
 
-		// This function can be called after all objects and render targets have been created.
-		// It will then generate draw commands for each object_t/render_target pair on the stage.
-		void generate_render_operations();
-
 		// -------------------- update loop -------------------- //
 
 		// Base class method does nothing, but can be overriden to update stage resources.
@@ -75,8 +63,7 @@ namespace geodesuka::core {
 		// Device Context Operations
 		virtual VkSubmitInfo transfer();
 		virtual VkSubmitInfo compute();
-		virtual std::vector<VkSubmitInfo> render();
-		virtual std::vector<VkPresentInfoKHR> present();
+		virtual object::render_target::render_info render() = 0;
 
 		// -------------------- render loop -------------------- //
 

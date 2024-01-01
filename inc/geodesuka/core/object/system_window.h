@@ -55,6 +55,7 @@ namespace geodesuka::core::object {
 		// fullscreen mode as well. The third argument is the name of the window, which will be used by the window manager to identify the window.
 		// It will also be the string identifier of the system window object. The fourth argument contains all the relevant information for the
 		// properties of the window, and the swapchain.
+		//system_window();
 		
 		// The first constructor using integers for the position and size will, use screen coordinates defined by the GLFW API. The position is 
 		// absolute screen coordinates for the constellation of displays the host system uses. The size is of course in screen coordinates as well.
@@ -99,10 +100,8 @@ namespace geodesuka::core::object {
 		
 		// -------------------- render_target methods --------------- //
 
-		//virtual std::vector<VkSubmitInfo> render(stage_t* aStage) override;
-
 		virtual VkResult next_frame() override;
-		//virtual std::vector<gcl::command_list> draw(const std::vector<object_t*>& aObject) override;
+
 		virtual VkPresentInfoKHR present_frame() override;
 
 		// -------------------- window methods ---------------------- //
@@ -117,68 +116,44 @@ namespace geodesuka::core::object {
 		system_display*							Display;
 		GLFWwindow*								Window;
 		VkSurfaceKHR							Surface;
+		gcl::swapchain*							Swapchain;
+		VkSemaphore 							AcquireSemaphore;
 		VkPipelineStageFlags					PipelineStageFlags;
 		VkResult								PresentationResult;
-		VkSemaphore								RenderWait;
-		VkSemaphore								RenderComplete;
-		VkSwapchainCreateInfoKHR				CreateInfo;
-		gcl::swapchain*							Swapchain;
-		VkPresentInfoKHR						PresentInfo;
-		std::vector<gcl::command_list>			PreRenderOperations;
-		std::vector<gcl::command_list>			PostRenderOperations;
 
 		// ------------------------------ Utility (Internal, Do Not Use) ------------------------------ //
-
-		// Render Target Side.
-		VkResult create_system_window(gcl::context* aContext, system_display* aSystemDisplay, const char* aName, const create_info& aCreateInfo, math::vec2<int> aPosition, math::vec2<int> aResolution);
-		
-		// ---------- system_window resources ---------- //
-
-		int create_glfw_window(engine* aEngine, window::setting aSetting, int aWidth, int aHeight, const char* aTitle, system_display* aDisplay);
-		VkResult create_vulkan_surface(engine* aEngine, gcl::context* aContext, GLFWwindow* aWindow, VkSurfaceKHR aSurface);
-		VkResult create_semaphores();
-		VkResult create_images();
-		VkResult create_cscbs();
-
-		// ---------- system_window renderer ---------- //
-
-		VkResult create_render_pass();
-		VkResult create_pipelines();
-
-		VkResult recreate_swapchain(int aFrameSizeX, int aFrameSizeY);
 
 		void clear();
 		void zero_out();
 
 		// ------------------------- Backend ------------------------- //
 
-		struct glfwargs {
-			window::setting Property;
+		struct window_creation_arguments {
+			window::setting Setting;
 			int Width;
 			int Height;
 			const char* Title;
 			glfw_monitor* Monitor;
 			GLFWwindow* Window;
+			window_creation_arguments();
 		};
+
+		// Signals to update thread to create window handle
+		// Needed backend for system window creation
+		static std::thread::id MainThreadID;
+		static std::atomic<bool> WindowCreated;
+		static std::atomic<bool> WindowCreationRequest;
+		static window_creation_arguments WindowArg;
+		static std::atomic<GLFWwindow*> ReturnWindow;
+		static std::atomic<GLFWwindow*> DestroyWindow;
 
 		static bool initialize();
 		static void terminate();
 		static void poll_events();
 
-		// Signals to update thread to create window handle
-		// Needed backend for system window creation
-		static std::thread::id MainThreadID;
-		static std::atomic<bool> SignalCreate;
-		static std::atomic<bool> WindowCreated;
-		static glfwargs WindowTempData;
-		static GLFWwindow* ReturnWindow;
-		static std::atomic<GLFWwindow*> DestroyWindow;
-
 		// This is necessary for main thread to create window handles.
-		static GLFWwindow* create_window_handle(core::object::window::setting aProperty, int aWidth, int aHeight, const char* aTitle, glfw_monitor* aMonitor, GLFWwindow* aWindow); 
-
+		static GLFWwindow* create_window_handle(core::object::window::setting aSetting, int aWidth, int aHeight, const char* aTitle, glfw_monitor* aMonitor = NULL, GLFWwindow* aWindow = NULL); 
 		static void destroy_window_handle(GLFWwindow* aWindow);
-		// This function is by the engine update thread to create and destroy handles.
 		static void process_window_handle_call();
 
 		// ------------------------------ Callbacks (Internal, Do Not Use) ------------------------------ //

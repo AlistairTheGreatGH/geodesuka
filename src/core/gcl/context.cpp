@@ -134,7 +134,7 @@ namespace geodesuka::core::gcl {
 		}
 
 		for (device::operation Op : aDesiredOperations) {
-			CommandPool[Op] = new command_pool(this, 0, Op);
+			CommandPool[Op] = new command_pool(this, Op);
 		}
 
 		this->Engine->Context |= this;
@@ -177,7 +177,7 @@ namespace geodesuka::core::gcl {
 	}
 
 	command_list context::create_command_list(device::operation aDeviceOperation, VkCommandBufferLevel aLevel, uint aCount) {
-		return CommandPool[aDeviceOperation]->allocate(aLevel, aCount);
+		return CommandPool[aDeviceOperation]->allocate(aCount, aLevel);
 	}
 
 	void context::destroy_command_buffer(device::operation aDeviceOperation, VkCommandBuffer aCommandBuffer) {

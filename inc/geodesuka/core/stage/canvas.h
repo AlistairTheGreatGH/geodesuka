@@ -17,6 +17,8 @@ namespace geodesuka::core::stage {
 
 		static constexpr int ID = 2;
 
+		std::vector<object::window*> Window;
+
 		canvas(gcl::context* aContext, object::window* aWindow);
 		~canvas();
 
@@ -34,13 +36,11 @@ namespace geodesuka::core::stage {
 
 		canvas(gcl::context* aContext);
 
-		//virtual batch render() override;
-
 	private:
 
-		std::vector<object::window*> Window;
+		std::vector<VkSemaphore> AcquireSemaphore;
 
-		virtual std::vector<VkSubmitInfo> render() override;
+		virtual object::render_target::render_info render() override;
 
 	};
 

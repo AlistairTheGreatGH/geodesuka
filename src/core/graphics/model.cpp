@@ -14,16 +14,15 @@ static Assimp::Importer* ModelImporter = nullptr;
 namespace geodesuka::core::graphics {
 
 	static void fill_and_traverse(model::node& aMeshNode, aiNode* aAssimpNode) {
-		assert(!aMeshNode.resize_children(aAssimpNode->mNumChildren));
-		for (int i = 0; i < aMeshNode.ChildCount; i++) {
-			aMeshNode[i].Root	= aMeshNode.Root;
+		aMeshNode.Child.resize(aAssimpNode->mNumChildren);
+		for (size_t i = 0; i < aMeshNode.Child.size(); i++) {
+			aMeshNode[i].Root = aMeshNode.Root;
 			aMeshNode[i].Parent = &aMeshNode;
 			fill_and_traverse(aMeshNode[i], aAssimpNode->mChildren[i]);
 		}
-
 		aMeshNode.Name = aAssimpNode->mName.C_Str();
-		assert(!aMeshNode.resize_indices(aAssimpNode->mNumMeshes));
-		for (int i = 0; i < aMeshNode.MeshIndexCount; i++) {
+		aMeshNode.MeshIndex.resize(aAssimpNode->mNumMeshes);
+		for (size_t i = 0; i < aMeshNode.MeshIndex.size(); i++) {
 			aMeshNode.MeshIndex[i] = aAssimpNode->mMeshes[i];
 		}
 		aAssimpNode->mTransformation.a1;
@@ -65,174 +64,78 @@ namespace geodesuka::core::graphics {
 	}
 
 	model::node::node() {
-		this->Root					= this;
-		this->Parent				= nullptr;
-		this->ChildCount			= 0;
-		this->Child					= nullptr;
-		this->Name					= "";
-		this->Transformation		= math::mat4<float>(
-			1.0f, 0.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f, 0.0f,
-			0.0f, 0.0f, 1.0f, 0.0f,
-			0.0f, 0.0f, 0.0f, 1.0f
-		);
-		this->MeshIndexCount		= 0;
-		this->MeshIndex				= NULL;
+		this->zero_out();
 	}
 
-	model::node::node(const node& aInput) {
-		this->Root			= this;
-		this->Parent		= nullptr;
-		this->ChildCount	= 0;
-		this->Child			= nullptr;
-		assert(!this->resize_children(aInput.ChildCount));
-		for (int i = 0; i < this->ChildCount; i++) {
-			this->Child[i].Root		= this;
-			this->Child[i].Parent	= this;
-			this->Child[i] = aInput.Child[i];
-		}
+	model::node::node(const node& aInput) : node() {
+		this->Root 		= this;
+		this->Parent 	= nullptr;
+		*this 			= aInput;
 	}
 
-	model::node::node(node&& aInput) noexcept {
-		this->Root				= this;
-		this->Parent			= nullptr;
-		this->ChildCount		= aInput.ChildCount;
-		this->Child				= aInput.Child;
-		this->Name				= aInput.Name;
-		this->MeshIndexCount	= aInput.MeshIndexCount;
-		this->MeshIndex			= aInput.MeshIndex;
-		this->Transformation	= aInput.Transformation;
-		aInput.ChildCount		= 0;
-		aInput.Child			= nullptr;
-		aInput.Name				= "";
-		aInput.MeshIndexCount	= 0;
-		aInput.MeshIndex		= NULL;
-		aInput.Transformation	= math::mat4<float>(
-			1.0f, 0.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f, 0.0f,
-			0.0f, 0.0f, 1.0f, 0.0f,
-			0.0f, 0.0f, 0.0f, 1.0f
-		);
-		for (int i = 0; i < this->ChildCount; i++) {
-			this->Child[i].set_root(this);
-			this->Child[i].Parent = this;
-		}
+	model::node::node(node&& aInput) noexcept : node() {
+		*this = aInput;
 	}
 
 	model::node::~node() {
 		this->clear();
 	}
 
-	model::node& model::node::operator[](int aIndex) {
-		return this->Child[aIndex];
-	}
-
 	model::node& model::node::operator=(const node& aRhs) {
 		if (this == &aRhs) return *this;
-		// Allocate memory for this node.
-		assert(!this->resize_children(aRhs.ChildCount));
-		assert(!this->resize_indices(aRhs.MeshIndexCount));
-		// Recursively Load Info.
-		for (int i = 0; i < this->ChildCount; i++) {
-			this->Child[i].Root		= this->Root;
-			this->Child[i].Parent	= this;
-			this->Child[i]			= aRhs.Child[i];
+		this->Name					= aRhs.Name;
+		this->MeshIndex				= aRhs.MeshIndex;
+		this->Transformation		= aRhs.Transformation;
+		this->Context				= aRhs.Context;
+		this->UniformBuffer			= aRhs.UniformBuffer;
+		this->Child.resize(aRhs.Child.size());
+		for (size_t i = 0; i < aRhs.Child.size(); i++) {
+			this->Child[i].Root 		= this->Root;
+			this->Child[i].Parent 		= this;
+			this->Child[i] 				= aRhs.Child[i];
 		}
-		// Move over actual data.
-		this->Name				= aRhs.Name;
-		this->Transformation	= aRhs.Transformation;
-		this->MeshIndexCount	= aRhs.MeshIndexCount;
-		memcpy(this->MeshIndex, aRhs.MeshIndex, this->MeshIndexCount * sizeof(int));
 		return *this;
 	}
 
 	model::node& model::node::operator=(node&& aRhs) noexcept {
-		this->clear();
-		this->ChildCount		= aRhs.ChildCount;
-		this->Child				= aRhs.Child;
-		this->Name				= aRhs.Name;
-		this->MeshIndexCount	= aRhs.MeshIndexCount;
-		this->MeshIndex			= aRhs.MeshIndex;
-		this->Transformation	= aRhs.Transformation;
-		aRhs.zero_out();
+		*this = aRhs;
 		return *this;
 	}
 
-	bool model::node::resize_children(int aNewCount) {
-		if (this->ChildCount == aNewCount) return false;
-		if (aNewCount > 0) {
-			node* nptr = new node[aNewCount];
-			if (nptr == nullptr) return true;
-			delete[] this->Child;
-			this->ChildCount	= aNewCount;
-			this->Child			= nptr;
-		}
-		else {
-			delete[] this->Child;
-			this->ChildCount	= 0;
-			this->Child			= nullptr;
-		}
-		return false;
+	model::node& model::node::operator[](int aIndex) {
+		return this->Child[aIndex];
 	}
 
-	bool model::node::resize_indices(int aNewCount) {
-		if (this->MeshIndexCount == aNewCount) return false;
-		if (aNewCount > 0) {
-			void* nptr = NULL;
-			size_t TypeSize = sizeof(int);
-			if (this->MeshIndex == NULL) {
-				nptr = malloc(aNewCount * TypeSize);
-			}
-			else {
-				nptr = realloc(this->MeshIndex, aNewCount * TypeSize);
-			}
-			if (nptr == NULL) return true;
-			this->MeshIndex = (int*)nptr;
-			if (aNewCount > this->MeshIndexCount) {
-				for (int i = this->MeshIndexCount; i < this->MeshIndexCount + aNewCount; i++) {
-					this->MeshIndex[i] = -1;
-				}
-			}
-			this->MeshIndexCount = aNewCount;
-		}
-		else {
-			free(this->MeshIndex);
-			this->MeshIndex = NULL;
-			this->MeshIndexCount = 0;
-		}
-		return false;
-	}
-
-	int model::node::count() {
+	int model::node::count() const {
 		int TotalCount = 1;
-		for (int i = 0; i < this->ChildCount; i++) {
-			TotalCount += this->Child[i].count();
+		for (const node& Chd : Child) {
+			TotalCount += Chd.count();
 		}
 		return TotalCount;
 	}
 
-	int model::node::mesh_reference_count() {
+	int model::node::mesh_reference_count() const {
 		int MeshCount = 0;
-		MeshCount += this->MeshIndexCount;
-		for (int i = 0; i < this->ChildCount; i++) {
-			MeshCount += this->Child[i].mesh_reference_count();
+		MeshCount += this->MeshIndex.size();
+		for (const node& Chd : Child) {
+			MeshCount += Chd.mesh_reference_count();
 		}
 		return MeshCount;
 	}
 
-	model::node model::node::linearize() {
+	model::node model::node::linearize() const {
 		node Linear;
-		assert(!Linear.resize_children(this->count()));
-		for (int i = 0; i < Linear.ChildCount; i++) {
-			Linear[i].Root		= &Linear;
-			Linear[i].Parent	= &Linear;
+		Linear.Child.resize(this->count());
+		for (node& Chd : Linear.Child) {
+			Chd.Root	= &Linear;
+			Chd.Parent	= &Linear;
 		}
 		int LinearOffset = 0;
 		Linear.linearize(LinearOffset, *this);
 		return Linear;
 	}
 
-	math::mat4<float> model::node::global_transform() {
+	math::mat4<float> model::node::global_transform() const {
 		// TODO: Do not forget there are animations that alter this.
 		if (this->Parent != nullptr) {
 			return this->Parent->global_transform() * this->Transformation;
@@ -242,115 +145,89 @@ namespace geodesuka::core::graphics {
 		}
 	}
 
-	void model::node::clear() {
-		delete[] this->Child;
-		free(this->MeshIndex);
-		this->zero_out();
-	}
-
-	void model::node::linearize(int& aOffset, node& aNode) {
-		assert(!this->Child[aOffset].resize_indices(aNode.MeshIndexCount));
+	void model::node::linearize(int& aOffset, const node& aNode) {
+		this->Child[aOffset].MeshIndex 			= aNode.MeshIndex;
 		this->Child[aOffset].Name				= aNode.Name;
-		this->Child[aOffset].MeshIndexCount		= aNode.MeshIndexCount;
-		memcpy(this->Child[aOffset].MeshIndex, aNode.MeshIndex, aNode.MeshIndexCount * sizeof(int));
 		this->Child[aOffset].Transformation		= aNode.global_transform();
 		aOffset += 1;
-		for (int i = 0; i < aNode.ChildCount; i++) {
-			this->linearize(aOffset, aNode[i]);
+		for (const node& Chd : aNode.Child) {
+			this->linearize(aOffset, Chd);
 		}
 	}
 
 	void model::node::set_root(node* aRoot) {
 		this->Root = aRoot;
-		for (int i = 0; i < this->ChildCount; i++) {
-			this->Child[i].set_root(aRoot);
+		for (node& Chd : Child) {
+			Chd.set_root(aRoot);
 		}
 	}
 
+	void model::node::clear() {
+		this->Child.clear();
+		this->Name = "";
+		this->MeshIndex.clear();
+		this->UniformBuffer = gcl::buffer();
+		this->zero_out();
+	}
+
 	void model::node::zero_out() {
-		//this->Root					= nullptr;
-		//this->Parent				= nullptr;
-		this->ChildCount			= 0;
-		this->Child					= nullptr;
-		this->Name					= "";
-		this->Transformation		= math::mat4<float>(
-			1.0f, 0.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f, 0.0f,
-			0.0f, 0.0f, 1.0f, 0.0f,
-			0.0f, 0.0f, 0.0f, 1.0f
+		Root			= this;
+		Parent			= nullptr;
+		Transformation = math::mat4<float>(
+			1.0f, 	0.0f, 	0.0f, 	0.0f,
+			0.0f,	1.0f, 	0.0f, 	0.0f,
+			0.0f,	0.0f, 	1.0f, 	0.0f,
+			0.0f,	0.0f, 	0.0f, 	1.0f
 		);
-		this->MeshIndexCount		= 0;
-		this->MeshIndex				= NULL;
+		Context 		= nullptr;
 	}
 
 	model::model() {
 
 	}
 
-	model::model(util::string& aFilePath) {
-
-	}
-
 	model::model(const char* aFilePath) {
-		this->load_host(aFilePath);
-	}
-
-	model::model(gcl::context* aContext, util::string& aFilePath)
-	{
-	}
-
-	model::model(gcl::context* aContext, const char* aFilePath) {
-		this->load_host(aFilePath);
-	}
-
-	model::model(gcl::context* aContext, model* aModel)
-	{
-	}
-
-	model::~model() {
-
-	}
-
-	// MeshInstanceCount * FaceCount
-	size_t model::command_buffer_count() const {
-		size_t CommandBufferCount = 0;
-		// Iterate through nodes with meshes.
-		for (size_t i = 0; i < this->MeshNode.size(); i++) {
-			// Iterate through mesh instances
-			for (int j = 0; j < this->MeshNode[i].MeshIndexCount; j++) {
-				// Get Face Count;
-				int Index = this->MeshNode[i].MeshIndex[j];
-				//CommandBufferCount += this->Mesh[Index]->Face.size();
-			}
-		}
-		return CommandBufferCount;
-	}
-
-	bool model::initialize() {
-		ModelImporter = new Assimp::Importer();
-		return (ModelImporter != nullptr);
-	}
-
-	void model::terminate() {
-		delete ModelImporter;
-		ModelImporter = nullptr;
-	}
-
-	bool model::load_host(const char* aFilePath) {
-		const aiScene *Scene = ModelImporter->ReadFile(aFilePath, 0);
+		if (aFilePath == NULL) return;
+		const aiScene *Scene = ModelImporter->ReadFile(aFilePath, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_JoinIdenticalVertices);
 
 		// Extract Node Hierarchy.
-		fill_and_traverse(this->RootNode, Scene->mRootNode);
+		fill_and_traverse(this->Hierarchy, Scene->mRootNode);
 
 		// Linearize Node Hierarchy
-		node Linear = this->RootNode.linearize();
+		this->LeafList = this->Hierarchy.linearize();
+		
+		this->Mesh			= std::vector<mesh*>(Scene->mNumMeshes);
+		this->Material		= std::vector<material*>(Scene->mNumMaterials);
+		this->Animation		= std::vector<animation*>(Scene->mNumAnimations);
+		this->Texture		= std::vector<gcl::image*>(Scene->mNumTextures);
+		this->Light			= std::vector<object::light*>(Scene->mNumLights);
+		this->Camera		= std::vector<object::camera*>(Scene->mNumCameras);
 
-		this->LinearNode.resize(Linear.ChildCount);
-		for (size_t i = 0; i < this->LinearNode.size(); i++) {
-			this->LinearNode[i] = Linear[i];
-			if (Linear[i].MeshIndexCount > 0){	
-				this->MeshNode.push_back(Linear[i]);
+		for (size_t i = 0; i < this->Mesh.size(); i++){
+			std::vector<mesh::vertex> VertexData(Scene->mMeshes[i]->mNumVertices);
+			for (size_t j = 0; j < VertexData.size(); j++) {
+				VertexData[i].Position = math::vec3<float>(
+					Scene->mMeshes[i]->mVertices[j].x,
+					Scene->mMeshes[i]->mVertices[j].y,
+					Scene->mMeshes[i]->mVertices[j].z
+				);
+				VertexData[i].Normal = math::vec3<float>(
+					Scene->mMeshes[i]->mNormals[j].x,
+					Scene->mMeshes[i]->mNormals[j].y,
+					Scene->mMeshes[i]->mNormals[j].z
+				);
+				VertexData[i].Tangent = math::vec3<float>(
+					Scene->mMeshes[i]->mTangents[j].x,
+					Scene->mMeshes[i]->mTangents[j].y,
+					Scene->mMeshes[i]->mTangents[j].z
+				);
+				VertexData[i].Bitangent = math::vec3<float>(
+					Scene->mMeshes[i]->mBitangents[j].x,
+					Scene->mMeshes[i]->mBitangents[j].y,
+					Scene->mMeshes[i]->mBitangents[j].z
+				);
 			}
+			Scene->mMeshes[i];
 		}
 
 		for (int i = 0; i < Scene->mNumMeshes; i++) {
@@ -365,15 +242,43 @@ namespace geodesuka::core::graphics {
 				std::cout << "\tBone Name: " << Scene->mMeshes[i]->mBones[j]->mName.C_Str() << std::endl;
 			}
 		}
-		for (int i = 0; i < Linear.ChildCount; i++) {
-			std::cout << Linear[i].Name.ptr() << std::endl;
+		for (const node& Chd : this->LeafList.Child) {
+			std::cout << Chd.Name << std::endl;
 		}
 
-		std::cout << "Hell0 World!" << std::endl;
-
 		ModelImporter->FreeScene();
-		return false;
 	}
 
+
+	model::model(gcl::context* aContext, const char* aFilePath) : model(aFilePath) {
+
+	}
+
+	model::model(gcl::context* aContext, model* aModel) {
+
+	}
+
+	model::~model() {
+
+	}
+
+	// MeshInstanceCount * FaceCount
+	size_t model::command_buffer_count() const {
+		size_t CommandBufferCount = 0;
+		for (const node& Chd : this->Hierarchy.Child) {
+			CommandBufferCount += Chd.mesh_reference_count();
+		}
+		return CommandBufferCount;
+	}
+
+	bool model::initialize() {
+		ModelImporter = new Assimp::Importer();
+		return (ModelImporter != nullptr);
+	}
+
+	void model::terminate() {
+		delete ModelImporter;
+		ModelImporter = nullptr;
+	}
 
 }

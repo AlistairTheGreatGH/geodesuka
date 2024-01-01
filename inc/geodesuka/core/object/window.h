@@ -86,21 +86,20 @@ namespace geodesuka::core::object {
 		virtual void set_resolution(math::vec2<uint> aResolution);
 		math::vec2<uint> get_resolution();
 		virtual bool should_close();
-		void set_input_target(object_t* aObject);
+
+		virtual std::vector<VkSubmitInfo> render(stage::canvas* aStage);
 
 	protected:
 
 		util::string 						Title;
-		math::vec2<float> 								Size;
+		math::vec2<float> 					Size;
 		setting 							Setting;
-		object_t* 							InputTarget;
-		size_t 								DesignatedTargetAttachment;
-		
-		// Default Window Renderer.
-		gcl::buffer							WindowUniformBuffer;
-		gcl::pipeline::rasterizer 			Rasterizer;
+		VkSubmitInfo 						PrerenderOperation;
+		VkSubmitInfo 						PostrenderOperation;
 
 		window(gcl::context* aContext, stage_t* aStage, const char* aName, math::vec3<uint> aFrameResolution, double aFrameRate, uint32_t aFrameCount, uint32_t aAttachmentCount);
+
+		VkResult create_renderer();
 
 	};
 

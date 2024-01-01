@@ -2,23 +2,26 @@
 #include <geodesuka/core/app.h>
 
 #include <omp.h>
+
 namespace geodesuka::core {
 
 	using namespace gcl;
 	using namespace logic;
+	using namespace util;
 
-	app::app(engine* aEngine) {
-		this->Engine = aEngine;
-		this->TimeStep = 1.0;
-		this->Name = "";
-		this->Version = { 1, 0, 0 };
+	app::app(engine* aEngine, double aTimeStep, const char* aName, version aVersion) {
+		this->Engine 	= aEngine;
+		this->TimeStep 	= aTimeStep;
+		this->Name 		= aName;
+		this->Version 	= aVersion;
 	}
 
 	// This is used engine side to generate thread for Application.
 	void app::prerun() {
+		// Thread Launch
+		this->Engine->Log << log::message(log::INFO, log::SUCCESS, "Thread Startup", log::GEODESUKA, "engine", this->Name, "Terminal Thread Initiated!");
 		// App is now ready to be run.
 		this->ExitApp.store(false);
-		//this->Engine->AppThreadID = std::this_thread::get_id();
 		// Initializes game loop.
 		this->run();
 		// Forces all threads to finish.
@@ -32,16 +35,13 @@ namespace geodesuka::core {
 		std::vector<logic::workload>	StageWorkload;
 
 		// Get all unique objects from each stage.
-		for (size_t i = 0; i < Stage.count(); i++) {
-			Object |= Stage[i]->Object;
+		for (stage_t* Stg : Stage.Handle) {
+			Object |= Stg->Object;
 		}
 
-		// Get total free thread count.
-		size_t WorkloadThreadCount = omp_get_max_threads() - Engine->Thread.count() - 1;
-
 		// Calculate Workloads For Each Object & Stage
-		ObjectWorkload = calculate_workloads(Object.count(), WorkloadThreadCount);
-		StageWorkload = calculate_workloads(Stage.count(), WorkloadThreadCount);
+		ObjectWorkload = calculate_workloads(Object.count(), omp_get_max_threads());
+		StageWorkload = calculate_workloads(Stage.count(), omp_get_max_threads());
 
 		// Parallel Work For Each Object & Stage
 		#pragma omp parallel
@@ -67,86 +67,92 @@ namespace geodesuka::core {
 		}
 
 		// Calcuate Collision Effects for 2D & 3D scene
-		for (size_t i = 0; i < Stage.count(); i++) {
-			Stage[i]->collision(aDeltaTime);
+		for (stage_t* Stg : Stage.Handle) {
+			Stg->collision(aDeltaTime);
 		}
 
 	}
 
 	std::map<context*, std::vector<VkSubmitInfo>> app::gather_transfer_operations() {
-		std::map<context*, std::vector<VkSubmitInfo>> Transfer;
-		object_list UniqueObject;
+		std::map<context*, std::vector<VkSubmitInfo>> TSI;
+		object_list UO;
 
 		// Collect a list of unique game objects.
 		for (stage_t* Stg : Stage.Handle) {
-			UniqueObject |= Stg->Object;
+			UO |= Stg->Object;
 		}
 
 		// Gather all transfer operations from each stage.
 		for (context* Ctx : Engine->Context.Handle) {
-
-			Transfer[Ctx] = std::vector<VkSubmitInfo>(0);
+			TSI[Ctx] = std::vector<VkSubmitInfo>(0);
 
 			// Gather all transfer operations from each unique object.
-			for (object_t* Obj : UniqueObject.Handle) {
+			for (object_t* Obj : UO.Handle) {
 				if (Obj->Context == Ctx) {
-					Transfer[Ctx].push_back(Obj->transfer());
+					TSI[Ctx].push_back(Obj->transfer());
 				}
 			}
 
 			// Gather all transfer operations from each stage.
 			for (stage_t* Stg : Stage.Handle) {
 				if (Stg->Context == Ctx) {
-					Transfer[Ctx].push_back(Stg->transfer());
+					TSI[Ctx].push_back(Stg->transfer());
 				}
 			}
 
 		}
 
-		return Transfer;
+		return TSI;
 	}
 
 	std::map<context*, std::vector<VkSubmitInfo>> app::gather_compute_operations() {
-		std::map<context*, std::vector<VkSubmitInfo>> Compute;
-		object_list UniqueObject;
+		std::map<context*, std::vector<VkSubmitInfo>> CSI;
+		object_list UO;
 
 		// Collect a list of unique game objects.
 		for (stage_t* Stg : Stage.Handle) {
-			UniqueObject |= Stg->Object;
+			UO |= Stg->Object;
 		}
 
 		// Gather all compute operations from each stage.
 		for (context* Ctx : Engine->Context.Handle) {
-
-			Compute[Ctx] = std::vector<VkSubmitInfo>(0);
+			CSI[Ctx] = std::vector<VkSubmitInfo>(0);
 
 			// Gather all compute operations from each unique object.
-			for (object_t* Obj : UniqueObject.Handle) {
+			for (object_t* Obj : UO.Handle) {
 				if (Obj->Context == Ctx) {
-					Compute[Ctx].push_back(Obj->compute());
+					CSI[Ctx].push_back(Obj->compute());
 				}
 			}
 
 			// Gather all compute operations from each stage.
 			for (stage_t* Stg : Stage.Handle) {
 				if (Stg->Context == Ctx) {
-					Compute[Ctx].push_back(Stg->compute());
+					CSI[Ctx].push_back(Stg->compute());
 				}
 			}
 
 		}
 
-		return Compute;
+		return CSI;
 	}
 
-	std::map<context*, std::vector<VkSubmitInfo>> app::gather_graphics_and_compute_operations() {
-		std::map<context*, std::vector<VkSubmitInfo>> GraphicsAndCompute;
-		return GraphicsAndCompute;
-	}
+	std::map<gcl::context*, app::render_info> app::render() {
+		std::map<gcl::context*, render_info> ARI;
 
-	std::map<context*, std::vector<VkPresentInfoKHR>> app::gather_presentation_operations() {
-		std::map<context*, std::vector<VkPresentInfoKHR>> Present;
-		return Present;
+		for (context* Ctx : Engine->Context.Handle) {
+			ARI[Ctx].GraphicsAndCompute = std::vector<VkSubmitInfo>(0);
+			ARI[Ctx].Presentation = std::vector<VkPresentInfoKHR>(0);
+			for (stage_t* Stg : Stage.Handle) {
+				if (Stg->Context == Ctx) {
+					object::render_target::render_info SRI = Stg->render();
+					ARI[Ctx].GraphicsAndCompute.insert(ARI[Ctx].GraphicsAndCompute.end(), SRI.SubmitInfo.begin(), SRI.SubmitInfo.end());
+					ARI[Ctx].Presentation.insert(ARI[Ctx].Presentation.end(), SRI.PresentInfo.begin(), SRI.PresentInfo.end());
+				}
+			}
+		}
+
+		return ARI;
 	}
 
 }

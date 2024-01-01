@@ -19,11 +19,10 @@ namespace geodesuka::builtin::app {
 	using namespace core::object;
 	using namespace core::stage;
 
-	unit_test::unit_test(engine* aEngine) : core::app(aEngine) {
+	unit_test::unit_test(engine* aEngine) : core::app(aEngine, 0.001, "Unit Test", { 1, 0, 0 }) {
 		// Initialize everything.
 
 		DeviceContext = nullptr;
-		TimeStep.store(0.001);
 
 	}
 
@@ -50,22 +49,28 @@ namespace geodesuka::builtin::app {
 
 		this->full_test();
 
-		//// Setup window properties.
-		//system_window::create_info Property;
-		//Property.Swapchain.FrameCount			= 3;
-		//Property.Swapchain.FrameRate			= 60.0;
-		//Property.Swapchain.ColorSpace			= swapchain::colorspace::SRGB_NONLINEAR;
-		//Property.Swapchain.ImageUsage			= image::usage::COLOR_ATTACHMENT | image::usage::SAMPLED | image::usage::TRANSFER_SRC | image::usage::TRANSFER_DST;
-		//Property.Swapchain.CompositeAlpha		= swapchain::composite::ALPHA_OPAQUE;
-		//Property.Swapchain.PresentMode			= swapchain::present_mode::FIFO;
-		//Property.Swapchain.Clipped				= true;
-		//Property.Swapchain.PixelFormat			= image::format::R8G8B8A8_SRGB;
-		////Property.Title							= "Unit Test";
+		// Setup window properties.
+		system_window::create_info SWCI;
+		SWCI.Swapchain.FrameCount			= 3;
+		SWCI.Swapchain.FrameRate			= 60.0;
+		SWCI.Swapchain.ColorSpace			= swapchain::colorspace::SRGB_NONLINEAR;
+		SWCI.Swapchain.ImageUsage			= image::usage::COLOR_ATTACHMENT | image::usage::SAMPLED | image::usage::TRANSFER_SRC | image::usage::TRANSFER_DST;
+		SWCI.Swapchain.CompositeAlpha		= swapchain::composite::ALPHA_OPAQUE;
+		SWCI.Swapchain.PresentMode			= swapchain::present_mode::FIFO;
+		SWCI.Swapchain.Clipped				= true;
+		SWCI.Swapchain.PixelFormat			= image::format::R8G8B8A8_SRGB;
 
-		//// Application main window.
-		//Window = new system_window(DeviceContext, Engine->Display[0], "Unit Test", Property, math::vec2<int>(0, 0), math::vec2<int>(640, 480));
+		// Application main window.
+		Window = new system_window(DeviceContext, Engine->Display[0], "Unit Test", SWCI, math::vec2<int>(0, 0), math::vec2<int>(640, 480));
 
-		//// Create Compositor Canvas.
+		//virtual_window::create_info VWCI;
+		//VWCI.FrameCount		= 3;
+		//VWCI.FrameRate		= 60.0;
+		//VWCI.PixelFormat	= image::format::R8G8B8A8_SRGB;
+
+		//virtual_window* VirtualWindow = new virtual_window(DeviceContext, nullptr, "Virtual Window", VWCI, math::vec2<int>(0, 0), math::vec2<int>(640, 480));
+
+		// Create Compositor Canvas.
 		//Compositor = new canvas(DeviceContext, Window);
 
 		// Create Demo3D Stage.
@@ -76,7 +81,7 @@ namespace geodesuka::builtin::app {
 
 		}
 
-		//delete Window;
+		delete Window; 
 
 		delete DeviceContext;
 	}

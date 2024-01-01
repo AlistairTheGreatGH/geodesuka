@@ -410,7 +410,7 @@ namespace geodesuka {
 		Thread |= new std::thread(&engine::terminal, this, aApp);
 		Thread |= new std::thread(&app::prerun, aApp);
 
-		omp_set_num_threads(omp_get_max_threads() - Thread.count() - 1);
+		omp_set_num_threads(omp_get_max_threads());
 
 		// Gather Thread ID 
 		ThreadID |= std::this_thread::get_id();
@@ -504,8 +504,7 @@ namespace geodesuka {
 	// and check if a render_target is ready to issue render commands.
 	void engine::render(core::app* aApp) {
 		VkResult Result = VK_SUCCESS;
-		std::map<gcl::context*, std::vector<VkSubmitInfo>> GraphicsAndCompute;
-		std::map<gcl::context*, std::vector<VkPresentInfoKHR>> Presentation;
+		std::map<gcl::context*, app::render_info> RenderInfo;
 
 		this->Log << log::message(log::INFO, log::SUCCESS, "Thread Startup", log::GEODESUKA, "engine", this->Name.Handle, "Render Thread Initiated!");
 
@@ -513,9 +512,7 @@ namespace geodesuka {
 
 			aApp->Mutex.lock();
 
-			GraphicsAndCompute = aApp->gather_graphics_and_compute_operations();
-
-			Presentation = aApp->gather_presentation_operations();
+			RenderInfo = aApp->render();
 
 			aApp->Mutex.unlock();
 
@@ -529,13 +526,13 @@ namespace geodesuka {
 				Result = Ctx->engine_wait({ device::operation::TRANSFER, device::operation::COMPUTE, device::operation::GRAPHICS_AND_COMPUTE });
 
 				// Execute all transfer device operations.
-				Result = Ctx->engine_execute(device::operation::GRAPHICS_AND_COMPUTE, GraphicsAndCompute[Ctx]);
+				Result = Ctx->engine_execute(device::operation::GRAPHICS_AND_COMPUTE, RenderInfo[Ctx].GraphicsAndCompute);
 
 				// Unlock device context.
 				Ctx->Mutex.unlock();
 
 				// Execute all system window presentation operations.
-				Result = Ctx->execute(Presentation[Ctx]);
+				Result = Ctx->execute(RenderInfo[Ctx].Presentation);
 			}
 
 		}
@@ -552,7 +549,9 @@ namespace geodesuka {
 		while (ThreadController.cycle(0.0)) {
 			util::string Command;
 
-			*this->SystemTerminal >> Command;
+			*SystemTerminal << "Geodesuka Engine>";
+
+			*SystemTerminal >> Command;
 
 			if (Command == "exit") {
 				this->ThreadController.terminate_all();

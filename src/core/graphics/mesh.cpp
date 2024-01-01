@@ -1,10 +1,6 @@
 #include <geodesuka/core/physics/mesh.h>
 #include <geodesuka/core/graphics/mesh.h>
 
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
-
 namespace geodesuka::core::physics {
 
 }
@@ -18,8 +14,8 @@ namespace geodesuka::core::graphics {
 		this->Bitangent					= math::vec3<float>(0.0f, 0.0f, 0.0f);
 		this->BoneID					= math::vec4<uint>(0u, 0u, 0u, 0u);
 		this->BoneWeight				= math::vec4<float>(0.0f, 0.0f, 0.0f, 0.0f);
-		this->TextureCoordinate			= math::vec2<float>(0.0f, 0.0f);
-		this->Color						= math::vec4<float>(0.0f, 0.0f, 0.0f, 0.0f);
+		//this->TextureCoordinate			= math::vec3<float>(0.0f, 0.0f, 0.0f);
+		//this->Color						= math::vec4<float>(0.0f, 0.0f, 0.0f, 0.0f);
 	}
 
 	//void mesh::generate(primitive aPrimitive) {
@@ -124,23 +120,15 @@ namespace geodesuka::core::graphics {
 
 	}
 
-	mesh::mesh(size_t aVertexCount, vertex* aVertex, size_t aIndexCount, ushort* aIndex) {
-		this->Vertex.resize(aVertexCount);
-		memcpy(this->Vertex.data(), aVertex, aVertexCount * sizeof(vertex));
-		this->Face.resize(1);
-		this->Face[0].IndexType = VK_INDEX_TYPE_UINT16;
-		this->Face[0].H16.resize(aIndexCount);
-		memcpy(this->Face[0].H16.data(), aIndex, aIndexCount * sizeof(ushort));
+	mesh::mesh(const std::vector<vertex>& aVertexData, const std::vector<ushort>& aIndexData) {
+
 	}
 
-	mesh::mesh(size_t aVertexCount, vertex* aVertex, size_t aIndexCount, uint* aIndex) {
-		this->Vertex.resize(aVertexCount);
-		memcpy(this->Vertex.data(), aVertex, aVertexCount * sizeof(vertex));
-		this->Face.resize(1);
-		this->Face[0].IndexType = VK_INDEX_TYPE_UINT32;
-		this->Face[0].H32.resize(aIndexCount);
-		memcpy(this->Face[0].H32.data(), aIndex, aIndexCount * sizeof(uint));
+	mesh::mesh(const std::vector<vertex>& aVertexData, const std::vector<uint>& aIndexData) {
+
 	}
+
+	mesh::~mesh() {}
 
 	mesh::vertex mesh::operator[](size_t aIndex) const {
 		return this->Vertex[aIndex];
@@ -149,4 +137,5 @@ namespace geodesuka::core::graphics {
 	mesh::vertex& mesh::operator[](size_t aIndex) {
 		return this->Vertex[aIndex];
 	}
+
 }
