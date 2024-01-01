@@ -9,6 +9,22 @@ Branches/Versions 0.1.0, and 0.1.1 have been abandoned due to their uncompilable
 will be slowly copied and pasted into this branch because of this. Version 0.1.2 is a branch of 0.0.21, which
 was the first successful rendering of the engine.
 
+## Building & Compiling
+
+# Windows
+
+Requires Packages: VulkanSDK
+cmake -S . -B bld/Windows/ -G "Visual Studio 17 2022"
+
+# Linux
+
+Requires Packages: gcc, git, cmake, xorg-dev, vulkan-sdk
+
+Run installer shell file
+./doc/install.sh
+Then run the project builder
+cmake -S . -B bld/Linux/
+
 # Updated List:
 
 - added thread_controller class, which will be used for interthread communication and timing.
