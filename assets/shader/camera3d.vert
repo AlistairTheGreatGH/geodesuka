@@ -4,25 +4,22 @@
 
 #define MAX_BONE_COUNT 256
 
-// Per Vertex Data
+// Mesh Geometry Data
 layout (location = 0) in vec3   VertexPosition;
 layout (location = 1) in vec2   VertexNormal;
 layout (location = 2) in vec4   VertexTangent;
 layout (location = 3) in vec3   VertexBitangent;
-layout (location = 4) in vec3   VertexTextureCoordinate;
-layout (location = 5) in vec3   VertexColor;
-layout (location = 6) in uvec4  VertexBoneID;
-layout (location = 7) in vec4   VertexBoneWeight;
+layout (location = 4) in uvec4  VertexBoneID;
+layout (location = 5) in vec4   VertexBoneWeight;
 
-// Mesh Per Vertex Data
-layout (location = 0) out vec3 WorldPosition;
-layout (location = 1) out vec3 WorldNormal;
-layout (location = 2) out vec2 TextureCoordinate;
+// Mesh Texturing & Coloring Data
+layout (location = 6) in vec3   VertexTextureCoordinate[8];
+layout (location = 7) in vec3   VertexColor[8];
 
 // Object Data
 layout (set = 0, binding = 0) uniform ObjectUBO {
     vec3 Position;
-    mat4 Rotation;
+    mat4 Orientation;
 } Object;
 
 // Per node 
@@ -47,12 +44,16 @@ layout (set = 0, binding = 3) uniform Camera3DUBO {
     mat4 Translation;
 } Camera3D;
 
+// Mesh Per Vertex Data
+layout (location = 0) out vec3 WorldPosition;
+layout (location = 1) out vec3 WorldNormal;
+layout (location = 2) out vec2 TextureCoordinate;
+
 void main() {
     // Raw Vertex
     vec4 v = vec4(VertexPosition, 1.0);
     // Raw Normal
     vec4 n = vec4(VertexNormal, 1.0);
-
     //
     bool MeshDeformationDetected = false;
 

@@ -20,7 +20,7 @@ namespace geodesuka::builtin::object {
 
 		// Load file into host memory.
 		//graphics::model* HostModel = (graphics::model*)Engine->File.open("dep/assimp/test/models/BLEND/CubeHierarchy_248.blend");
-		graphics::model* HostModel = (graphics::model*)Engine->File.open("../../dep/assimp-src/test/models/FBX/animation_with_skeleton.fbx");
+		graphics::model* HostModel = (graphics::model*)Engine->File.open("../../dep/assimp-src/test/models/FBX/huesitos.fbx");
 		//graphics::model* HostModel = (graphics::model*)Engine->File.open("dep/assimp/test/models/FBX/huesitos.fbx");
 
 		//graphics::model* HostModel = new graphics::model("huesitos.fbx");

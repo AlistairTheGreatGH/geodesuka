@@ -21,26 +21,21 @@ namespace geodesuka::core::graphics {
 		};
 
 		struct vertex {
-			math::vec3<float> 		Position;
-			math::vec3<float> 		Normal;
-			math::vec3<float> 		Tangent;
-			math::vec3<float> 		Bitangent;
-			math::vec4<uint> 		BoneID;
-			math::vec4<float> 		BoneWeight;
-			math::vec3<float> 		TextureCoordinate[8];
-			math::vec4<float> 		Color[8];
+			math::vec3<float> 			Position;
+			math::vec3<float> 			Normal;
+			math::vec3<float> 			Tangent;
+			math::vec3<float> 			Bitangent;
+			math::vec4<uint> 			BoneID;
+			math::vec4<float> 			BoneWeight;
+			math::vec3<float> 			TextureCoordinate;
+			math::vec4<float> 			Color;
 			vertex();
 		};
 
-		struct uv {
-			// math::vec2<float> 		TextureCoordinate;
-			// math::vec4<float> 		Color;
-		};
-
-		struct face {
-			VkIndexType 				IndexType;
-			std::vector<ushort>			H16;
-			std::vector<uint>			H32;
+		struct index {
+			VkIndexType 				Type;
+			std::vector<ushort>			Data16;
+			std::vector<uint>			Data32;
 		};
 
 		struct bone {
@@ -48,34 +43,33 @@ namespace geodesuka::core::graphics {
 				uint						ID;
 				float						Weight;
 			};
-			util::string				Name;
+			std::string					Name;
 			std::vector<vertex_weight>	Vertex;
 		};
 
 		// Host Memory Data.
 		float 						BoundingRadius;
 		std::vector<vertex> 		Vertex;
-		std::vector<face> 			Face;
+		index 						Index;
 		std::vector<bone> 			Bone;
+		// Device Memory
+		gcl::context* 				Context;
 		gcl::buffer 				VertexBuffer;
 		std::vector<gcl::buffer> 	IndexBuffer;
 		gcl::buffer 				BoneBuffer;
 
 		mesh();
-		mesh(const std::vector<vertex>& aVertexData, const std::vector<ushort>& aIndexData);
-		mesh(const std::vector<vertex>& aVertexData, const std::vector<uint>& aIndexData);
+		mesh(gcl::context* aContext, const std::vector<vertex>& aVertexData, const index& aIndexData, const std::vector<bone>& aBoneData);
 		~mesh();
 
 		vertex operator[](size_t aIndex) const;
 		vertex& operator[](size_t aIndex);
 
-		//
-		void recenter();
-
 	private:
 
 		void clear();
 		void zero_out();
+		void generate_device_representation(gcl::context* aContext);
 
 	};
 

@@ -71,7 +71,7 @@ namespace geodesuka::builtin::app {
 		//virtual_window* VirtualWindow = new virtual_window(DeviceContext, nullptr, "Virtual Window", VWCI, math::vec2<int>(0, 0), math::vec2<int>(640, 480));
 
 		// Create Compositor Canvas.
-		//Compositor = new canvas(DeviceContext, Window);
+		Compositor = new canvas(DeviceContext, Window);
 
 		// Create Demo3D Stage.
 		//Demo3D = new demo3d(Context);

@@ -200,34 +200,103 @@ namespace geodesuka::core::graphics {
 		this->Material		= std::vector<material*>(Scene->mNumMaterials);
 		this->Animation		= std::vector<animation*>(Scene->mNumAnimations);
 		this->Texture		= std::vector<gcl::image*>(Scene->mNumTextures);
-		this->Light			= std::vector<object::light*>(Scene->mNumLights);
-		this->Camera		= std::vector<object::camera*>(Scene->mNumCameras);
 
-		for (size_t i = 0; i < this->Mesh.size(); i++){
+		for (size_t i = 0; i < this->Mesh.size(); i++) {
+			// Load Raw Vertex Data (Gross, optimize later)
 			std::vector<mesh::vertex> VertexData(Scene->mMeshes[i]->mNumVertices);
 			for (size_t j = 0; j < VertexData.size(); j++) {
-				VertexData[i].Position = math::vec3<float>(
-					Scene->mMeshes[i]->mVertices[j].x,
-					Scene->mMeshes[i]->mVertices[j].y,
-					Scene->mMeshes[i]->mVertices[j].z
-				);
-				VertexData[i].Normal = math::vec3<float>(
-					Scene->mMeshes[i]->mNormals[j].x,
-					Scene->mMeshes[i]->mNormals[j].y,
-					Scene->mMeshes[i]->mNormals[j].z
-				);
-				VertexData[i].Tangent = math::vec3<float>(
-					Scene->mMeshes[i]->mTangents[j].x,
-					Scene->mMeshes[i]->mTangents[j].y,
-					Scene->mMeshes[i]->mTangents[j].z
-				);
-				VertexData[i].Bitangent = math::vec3<float>(
-					Scene->mMeshes[i]->mBitangents[j].x,
-					Scene->mMeshes[i]->mBitangents[j].y,
-					Scene->mMeshes[i]->mBitangents[j].z
-				);
+				if (Scene->mMeshes[i]->HasPositions()) {
+					VertexData[j].Position = math::vec3<float>(
+						Scene->mMeshes[i]->mVertices[j].x,
+						Scene->mMeshes[i]->mVertices[j].y,
+						Scene->mMeshes[i]->mVertices[j].z
+					);
+				}
+				if (Scene->mMeshes[i]->HasNormals()) {
+					VertexData[j].Normal = math::vec3<float>(
+						Scene->mMeshes[i]->mNormals[j].x,
+						Scene->mMeshes[i]->mNormals[j].y,
+						Scene->mMeshes[i]->mNormals[j].z
+					);
+				}
+				if (Scene->mMeshes[i]->HasTangentsAndBitangents()) {
+					VertexData[j].Tangent = math::vec3<float>(
+						Scene->mMeshes[i]->mTangents[j].x,
+						Scene->mMeshes[i]->mTangents[j].y,
+						Scene->mMeshes[i]->mTangents[j].z
+					);
+					VertexData[j].Bitangent = math::vec3<float>(
+						Scene->mMeshes[i]->mBitangents[j].x,
+						Scene->mMeshes[i]->mBitangents[j].y,
+						Scene->mMeshes[i]->mBitangents[j].z
+					);
+				}
+
+				// -------------------- Texturing & Coloring -------------------- //
+
+				// TODO: Support multiple textures
+				// Take only the first element of the Texture Coordinate Array.
+				for (int k = 0; k < 1 /* AI_MAX_NUMBER_OF_TEXTURECOORDS */; k++) {
+					if (Scene->mMeshes[i]->HasTextureCoords(k)) {
+						VertexData[j].TextureCoordinate = math::vec3<float>(
+							Scene->mMeshes[i]->mTextureCoords[k][j].x,
+							Scene->mMeshes[i]->mTextureCoords[k][j].y,
+							Scene->mMeshes[i]->mTextureCoords[k][j].z
+						);
+					}
+				}
+				// Take an average of all the Colors associated with Vertex.
+				for (int k = 0; k < 1 /*AI_MAX_NUMBER_OF_COLOR_SETS*/; k++) {
+					if (Scene->mMeshes[i]->HasVertexColors(k)) {
+						VertexData[j].Color += math::vec4<float>(
+							Scene->mMeshes[i]->mColors[k][j].r,
+							Scene->mMeshes[i]->mColors[k][j].g,
+							Scene->mMeshes[i]->mColors[k][j].b,
+							Scene->mMeshes[i]->mColors[k][j].a
+						);
+					}
+				}
+				// VertexData[j].Color /= AI_MAX_NUMBER_OF_COLOR_SETS;
 			}
-			Scene->mMeshes[i];
+
+			// Load Index Data (Used for primitive rendering)
+			mesh::index IndexData;
+			if (Scene->mMeshes[i]->mNumVertices <= (1 << 16)) {
+				IndexData.Type = VK_INDEX_TYPE_UINT16;
+				IndexData.Data16 = std::vector<ushort>(Scene->mMeshes[i]->mNumFaces * 3);
+			} else {
+				IndexData.Type = VK_INDEX_TYPE_UINT32;
+				IndexData.Data32 = std::vector<uint>(Scene->mMeshes[i]->mNumFaces * 3);
+			}
+			for (size_t j = 0; j < Scene->mMeshes[i]->mNumFaces; j++) {
+				switch(IndexData.Type) {
+				case VK_INDEX_TYPE_UINT16:
+					IndexData.Data16[3*j + 0] = (ushort)Scene->mMeshes[i]->mFaces[j].mIndices[0];
+					IndexData.Data16[3*j + 1] = (ushort)Scene->mMeshes[i]->mFaces[j].mIndices[1];
+					IndexData.Data16[3*j + 2] = (ushort)Scene->mMeshes[i]->mFaces[j].mIndices[2];
+					break;
+				case VK_INDEX_TYPE_UINT32:
+					IndexData.Data16[3*j + 0] = (uint)Scene->mMeshes[i]->mFaces[j].mIndices[0];
+					IndexData.Data16[3*j + 1] = (uint)Scene->mMeshes[i]->mFaces[j].mIndices[1];
+					IndexData.Data16[3*j + 2] = (uint)Scene->mMeshes[i]->mFaces[j].mIndices[2];
+					break;
+				default:
+					break;
+				}
+			}
+
+			// Load Bone Data
+			std::vector<mesh::bone> BoneData(Scene->mMeshes[i]->mNumBones);
+			for (size_t j = 0; j < BoneData.size(); j++) {
+				BoneData[i].Name = Scene->mMeshes[i]->mBones[j]->mName.C_Str();
+				BoneData[i].Vertex.resize(Scene->mMeshes[i]->mBones[j]->mNumWeights);
+				for (size_t k = 0; k < BoneData[i].Vertex.size(); k++) {
+					BoneData[i].Vertex[k].ID 		= Scene->mMeshes[i]->mBones[j]->mWeights[k].mVertexId;
+					BoneData[i].Vertex[k].Weight 	= Scene->mMeshes[i]->mBones[j]->mWeights[k].mWeight;
+				}
+			}
+
+			// Create Mesh Object
 		}
 
 		for (int i = 0; i < Scene->mNumMeshes; i++) {
