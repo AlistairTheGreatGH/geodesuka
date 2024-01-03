@@ -75,10 +75,10 @@ namespace geodesuka::core::graphics {
 
 		// Resources
 		gcl::context*						Context;
-		std::vector<mesh*> 					Mesh;
-		std::vector<material*> 				Material;
-		std::vector<animation*> 			Animation;
-		std::vector<gcl::image*> 			Texture;
+		std::vector<mesh> 					Mesh;
+		std::vector<material> 				Material;
+		std::vector<animation> 				Animation;
+		std::vector<gcl::image> 			Texture;
 		// std::vector<object::light*> 		Light;				// Not Relevant To Model, open as stage.
 		// std::vector<object::camera*> 		Camera;			// Not Relevant To Model, open as stage.
 		gcl::buffer 						UniformBuffer;

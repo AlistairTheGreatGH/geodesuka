@@ -190,16 +190,32 @@ namespace geodesuka::core::graphics {
 		if (aFilePath == NULL) return;
 		const aiScene *Scene = ModelImporter->ReadFile(aFilePath, aiProcess_Triangulate | aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_JoinIdenticalVertices);
 
-		// Extract Node Hierarchy.
+		for (int i = 0; i < Scene->mNumMeshes; i++) {
+			std::cout << "Mesh Name: " << Scene->mMeshes[i]->mName.C_Str() << std::endl;
+		}
+		std::cout << "--------------- Node Hierarchy --------------------" << std::endl;
+		traverse(Scene, Scene->mRootNode);
+		std::cout << "--------------- Mesh & Bone --------------------" << std::endl;
+		for (int i = 0; i < Scene->mNumMeshes; i++) {
+			std::cout << "Mesh Name: " << Scene->mMeshes[i]->mName.C_Str() << std::endl;
+			for (int j = 0; j < Scene->mMeshes[i]->mNumBones; j++) {
+				std::cout << "\tBone Name: " << Scene->mMeshes[i]->mBones[j]->mName.C_Str() << std::endl;
+			}
+		}
+		for (const node& Chd : this->LeafList.Child) {
+			std::cout << Chd.Name << std::endl;
+		}
+
+		// Extract Scene Hiearchy
 		fill_and_traverse(this->Hierarchy, Scene->mRootNode);
 
 		// Linearize Node Hierarchy
 		this->LeafList = this->Hierarchy.linearize();
 		
-		this->Mesh			= std::vector<mesh*>(Scene->mNumMeshes);
-		this->Material		= std::vector<material*>(Scene->mNumMaterials);
-		this->Animation		= std::vector<animation*>(Scene->mNumAnimations);
-		this->Texture		= std::vector<gcl::image*>(Scene->mNumTextures);
+		this->Mesh			= std::vector<mesh>(Scene->mNumMeshes);
+		this->Material		= std::vector<material>(Scene->mNumMaterials);
+		this->Animation		= std::vector<animation>(Scene->mNumAnimations);
+		this->Texture		= std::vector<gcl::image>(Scene->mNumTextures);
 
 		for (size_t i = 0; i < this->Mesh.size(); i++) {
 			// Load Raw Vertex Data (Gross, optimize later)
@@ -288,31 +304,19 @@ namespace geodesuka::core::graphics {
 			// Load Bone Data
 			std::vector<mesh::bone> BoneData(Scene->mMeshes[i]->mNumBones);
 			for (size_t j = 0; j < BoneData.size(); j++) {
-				BoneData[i].Name = Scene->mMeshes[i]->mBones[j]->mName.C_Str();
-				BoneData[i].Vertex.resize(Scene->mMeshes[i]->mBones[j]->mNumWeights);
-				for (size_t k = 0; k < BoneData[i].Vertex.size(); k++) {
-					BoneData[i].Vertex[k].ID 		= Scene->mMeshes[i]->mBones[j]->mWeights[k].mVertexId;
-					BoneData[i].Vertex[k].Weight 	= Scene->mMeshes[i]->mBones[j]->mWeights[k].mWeight;
+				aiBone* Bone			= Scene->mMeshes[i]->mBones[j];
+				BoneData[j].Name		= Bone->mName.C_Str();
+				BoneData[j].Vertex		= std::vector<mesh::bone::vertex_weight>(Bone->mNumWeights);
+				for (size_t k = 0; k < BoneData[j].Vertex.size(); k++) {
+					BoneData[j].Vertex[k].ID 		= Bone->mWeights[k].mVertexId;
+					BoneData[j].Vertex[k].Weight 	= Bone->mWeights[k].mWeight;
 				}
 			}
 
 			// Create Mesh Object
-		}
-
-		for (int i = 0; i < Scene->mNumMeshes; i++) {
-			std::cout << "Mesh Name: " << Scene->mMeshes[i]->mName.C_Str() << std::endl;
-		}
-		std::cout << "--------------- Node Hierarchy --------------------" << std::endl;
-		traverse(Scene, Scene->mRootNode);
-		std::cout << "--------------- Mesh & Bone --------------------" << std::endl;
-		for (int i = 0; i < Scene->mNumMeshes; i++) {
-			std::cout << "Mesh Name: " << Scene->mMeshes[i]->mName.C_Str() << std::endl;
-			for (int j = 0; j < Scene->mMeshes[i]->mNumBones; j++) {
-				std::cout << "\tBone Name: " << Scene->mMeshes[i]->mBones[j]->mName.C_Str() << std::endl;
-			}
-		}
-		for (const node& Chd : this->LeafList.Child) {
-			std::cout << Chd.Name << std::endl;
+			this->Mesh[i] = mesh(nullptr, VertexData, IndexData, BoneData);
+			this->Mesh[i].Name = Scene->mMeshes[i]->mName.C_Str();
+			this->Mesh[i].MaterialIndex = Scene->mMeshes[i]->mMaterialIndex;
 		}
 
 		ModelImporter->FreeScene();

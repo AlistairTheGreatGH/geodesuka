@@ -49,6 +49,8 @@ namespace geodesuka::core::graphics {
 
 		// Host Memory Data.
 		float 						BoundingRadius;
+		std::string 				Name;
+		uint 						MaterialIndex;
 		std::vector<vertex> 		Vertex;
 		index 						Index;
 		std::vector<bone> 			Bone;

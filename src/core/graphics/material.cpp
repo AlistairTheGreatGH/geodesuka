@@ -7,8 +7,12 @@
 
 namespace geodesuka::core::graphics {
 
+    material::material() {
 
+    }
 
-
+	material::~material() {
+        
+    }
 
 }

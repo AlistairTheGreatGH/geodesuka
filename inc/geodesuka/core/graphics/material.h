@@ -12,9 +12,7 @@ namespace geodesuka::core::graphics {
 	class material {
 	public:
 
-		std::vector<gcl::image*> Texture;
-		gcl::shader* VertexShader;
-		gcl::shader* PixelShader;
+		
 
 		material();
 		~material();
