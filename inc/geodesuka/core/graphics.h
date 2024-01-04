@@ -5,6 +5,7 @@
 #include "graphics/font.h"
 #include "graphics/mesh.h"
 #include "graphics/material.h"
+#include "graphics/animation.h"
 #include "graphics/model.h"
 
 #endif // !GEODESUKA_CORE_GRAPHICS_H

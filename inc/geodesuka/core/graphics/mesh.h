@@ -45,19 +45,21 @@ namespace geodesuka::core::graphics {
 			};
 			std::string					Name;
 			std::vector<vertex_weight>	Vertex;
+			math::mat4<float>			Offset;
 		};
 
-		// Host Memory Data.
-		float 						BoundingRadius;
+		// Metadata.
 		std::string 				Name;
+		gcl::context* 				Context;
 		uint 						MaterialIndex;
+		float 						BoundingRadius;
+		// Host Memory Objects
 		std::vector<vertex> 		Vertex;
 		index 						Index;
 		std::vector<bone> 			Bone;
-		// Device Memory
-		gcl::context* 				Context;
+		// Device Memory Objects
 		gcl::buffer 				VertexBuffer;
-		std::vector<gcl::buffer> 	IndexBuffer;
+		gcl::buffer 				IndexBuffer;
 		gcl::buffer 				BoneBuffer;
 
 		mesh();

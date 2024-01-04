@@ -311,12 +311,52 @@ namespace geodesuka::core::graphics {
 					BoneData[j].Vertex[k].ID 		= Bone->mWeights[k].mVertexId;
 					BoneData[j].Vertex[k].Weight 	= Bone->mWeights[k].mWeight;
 				}
+				BoneData[j].Offset = math::mat4<float>(
+					Bone->mOffsetMatrix.a1, Bone->mOffsetMatrix.a2, Bone->mOffsetMatrix.a3, Bone->mOffsetMatrix.a4,
+					Bone->mOffsetMatrix.b1, Bone->mOffsetMatrix.b2, Bone->mOffsetMatrix.b3, Bone->mOffsetMatrix.b4,
+					Bone->mOffsetMatrix.c1, Bone->mOffsetMatrix.c2, Bone->mOffsetMatrix.c3, Bone->mOffsetMatrix.c4,
+					Bone->mOffsetMatrix.d1, Bone->mOffsetMatrix.d2, Bone->mOffsetMatrix.d3, Bone->mOffsetMatrix.d4
+				);
 			}
+
+			// for (size_t j = 0; j < BoneData.size(); j++) {
+			// 	for (size_t k = 0; k < BoneData[j].Vertex.size(); k++) {
+			// 	size_t Offset = 0;
+			// 		size_t VI 						= BoneData[j].Vertex[k].ID;
+			// 		VertexData[VI].BoneID[0] 		= j;
+			// 		VertexData[VI].BoneWeight[0] 	= BoneData[j].Vertex[k].Weight;
+			// 	}
+			// }
+
+			// for (mesh::vertex& Vertex : VertexData) {
+			// 	for (size_t j = 0; j < BoneData.size(); j++) {
+
+			// 	}
+			// }
+
+			// // Add bone data to VertexBuffer.
+			// for (mesh::bone Bone : BoneData) {
+			// 	for (mesh::bone::vertex_weight Vertex : Bone.Vertex) {
+			// 		size_t j = 0;
+			// 		if (VertexData[Vertex.ID].BoneID[j] == UINT32_MAX) {
+
+			// 		}
+			// 		VertexData[Vertex.ID].BoneID[0] 		= 0; // TODO: Determine how this will map to bone buffer.
+			// 		VertexData[Vertex.ID].BoneWeight[0] 	= Vertex.Weight;
+			// 	}
+			// }
 
 			// Create Mesh Object
 			this->Mesh[i] = mesh(nullptr, VertexData, IndexData, BoneData);
 			this->Mesh[i].Name = Scene->mMeshes[i]->mName.C_Str();
 			this->Mesh[i].MaterialIndex = Scene->mMeshes[i]->mMaterialIndex;
+		}
+
+		for (size_t i = 0; i < Scene->mNumMaterials; i++) {
+			aiMaterial *Mat = Scene->mMaterials[i];
+			for (size_t j = 0; j < Mat->mNumProperties; j++) {
+
+			}
 		}
 
 		ModelImporter->FreeScene();
@@ -333,6 +373,10 @@ namespace geodesuka::core::graphics {
 
 	model::~model() {
 
+	}
+
+	void model::update(double aDeltaTime) {
+		
 	}
 
 	// MeshInstanceCount * FaceCount

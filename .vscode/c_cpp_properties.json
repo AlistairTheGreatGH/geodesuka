@@ -3,7 +3,7 @@
         {
             "name": "Win32",
             "includePath": [
-                "C:/Program Files/VulkanSDK/1.3.250.0/Include",
+                "C:/Program Files/VulkanSDK/1.3.268.0/Include",
                 "${workspaceFolder}/inc/",
                 "${workspaceFolder}/dep/glfw-build/src/",
                 "${workspaceFolder}/dep/assimp-build/include/",

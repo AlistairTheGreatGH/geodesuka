@@ -7,8 +7,8 @@
 #include "../io/file.h"
 
 #include "mesh.h"
-#include "animation.h"
 #include "material.h"
+#include "animation.h"
 
 namespace geodesuka::core::object {
 	class camera;
@@ -88,6 +88,8 @@ namespace geodesuka::core::graphics {
 		model(gcl::context* aContext, const char* aFilePath);
 		model(gcl::context* aContext, model* aModel);
 		~model();
+
+		void update(double aDeltaTime);
 
 		// Calculates the total number of command buffers needed to
 		// represent the model.

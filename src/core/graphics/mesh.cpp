@@ -14,7 +14,7 @@ namespace geodesuka::core::graphics {
 		this->Normal					= math::vec3<float>(0.0f, 0.0f, 0.0f);
 		this->Tangent					= math::vec3<float>(0.0f, 0.0f, 0.0f);
 		this->Bitangent					= math::vec3<float>(0.0f, 0.0f, 0.0f);
-		this->BoneID					= math::vec4<uint>(0u, 0u, 0u, 0u);
+		this->BoneID					= math::vec4<uint>(UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX);
 		this->BoneWeight				= math::vec4<float>(0.0f, 0.0f, 0.0f, 0.0f);
 		this->TextureCoordinate			= math::vec3<float>(0.0f, 0.0f, 0.0f);
 		this->Color						= math::vec4<float>(0.0f, 0.0f, 0.0f, 0.0f);

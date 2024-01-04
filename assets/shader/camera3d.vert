@@ -11,10 +11,9 @@ layout (location = 2) in vec4   VertexTangent;
 layout (location = 3) in vec3   VertexBitangent;
 layout (location = 4) in uvec4  VertexBoneID;
 layout (location = 5) in vec4   VertexBoneWeight;
-
 // Mesh Texturing & Coloring Data
-layout (location = 6) in vec3   VertexTextureCoordinate[8];
-layout (location = 7) in vec3   VertexColor[8];
+layout (location = 6) in vec3   VertexTextureCoordinate;
+layout (location = 7) in vec3   VertexColor;
 
 // Object Data
 layout (set = 0, binding = 0) uniform ObjectUBO {
@@ -34,6 +33,7 @@ layout (set = 0, binding = 1) uniform NodeUBO {
 
 // Per mesh data, including vertex transformations.
 layout (set = 0, binding = 2) uniform MeshUBO {
+    mat4 Offset[MAX_BONE_COUNT];
     mat4 BoneTransform[MAX_BONE_COUNT];
 } Mesh;
 
@@ -54,20 +54,18 @@ void main() {
     vec4 v = vec4(VertexPosition, 1.0);
     // Raw Normal
     vec4 n = vec4(VertexNormal, 1.0);
-    //
-    bool MeshDeformationDetected = false;
-
-    // Zero Matrix
-    mat4 AggregateVertexTransform = mat4(0.0f);
 
     // Check for Mesh Deformations
+    bool MeshDeformationDetected = false;
     for (int i = 0; i < 4; i++) {
-        if (VertexBoneID[i] >= 0) {
+        if (VertexBoneID[i] < MAX_BONE_COUNT) {
             MeshDeformationDetected = true;
             break;
         }
     }
 
+    // Zero Matrix
+    mat4 AggregateVertexTransform = mat4(0.0f);
     if (MeshDeformationDetected){
         // Apply Mesh Deformations to vertices.
         for (int i = 0; i < 4; i++) {
