@@ -44,43 +44,6 @@ layout (location = 1) out vec3 WorldNormal;
 layout (location = 2) out vec2 TextureCoordinate;
 
 void main() {
-    // Raw Vertex
-    vec4 v = vec4(VertexPosition, 1.0);
-    // Raw Normal
-    vec4 n = vec4(VertexNormal, 1.0);
-
-    mat4 mt = mat4(0.0f);
-    if (VertexBoneID[0] < MAX_BONE_COUNT) {
-        // Bone Transformations detected.
-        for (int i = 0; i < 4; i++) {
-            mt += Mesh.BoneTransform[VertexBoneID[i]] * Mesh.OffsetTransform[VertexBoneID[i]] * VertexBoneWeight[i];
-        }
-    } else {
-        // No Bone Transformations detected.
-        mt = Mesh.Transform;
-    }
-
-    // Transform to Model Space
-    v = mt * v;
-    n = mt * n;
-
-    mat4 ct = mat4(
-        1.0f, 0.0f, 0.0f, Object.Position.x,
-        0.0f, 1.0f, 0.0f, Object.Position.y,
-        0.0f, 0.0f, 1.0f, Object.Position.z,
-        0.0f, 0.0f, 0.0f, 1.0f
-    );
-    // Transform to World Space
-    v = ct * Object.Orientation * v;
-    n = ct * Object.Orientation * n;
-
-    // Carry data and interpolate to fragment shader. (Needed for Lighting & Shadows)
-    WorldPosition   = v.xyz;
-    WorldNormal     = n.xyz;
-
-    // Interpolate Texture Coordinates.
-    TextureCoordinate = VertexTextureCoordinate;
-
     // Transform to Camera Space for rasterization of primitive.
     gl_Position = Camera3D.Projection * Camera3D.Rotation * Camera3D.Translation * v;
 }
