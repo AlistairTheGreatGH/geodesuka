@@ -1,6 +1,9 @@
 #include <geodesuka/core/physics/mesh.h>
 #include <geodesuka/core/graphics/mesh.h>
 
+#include <vector>
+#include <algorithm>
+
 namespace geodesuka::core::physics {
 
 }
@@ -14,20 +17,67 @@ namespace geodesuka::core::graphics {
 		this->Normal					= math::vec3<float>(0.0f, 0.0f, 0.0f);
 		this->Tangent					= math::vec3<float>(0.0f, 0.0f, 0.0f);
 		this->Bitangent					= math::vec3<float>(0.0f, 0.0f, 0.0f);
-		this->BoneID					= math::vec4<uint>(UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX);
-		this->BoneWeight				= math::vec4<float>(0.0f, 0.0f, 0.0f, 0.0f);
+		// this->BoneID					= math::vec4<uint>(UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX);
+		// this->BoneWeight				= math::vec4<float>(0.0f, 0.0f, 0.0f, 0.0f);
 		this->TextureCoordinate			= math::vec3<float>(0.0f, 0.0f, 0.0f);
 		this->Color						= math::vec4<float>(0.0f, 0.0f, 0.0f, 0.0f);
+	}
+
+	mesh::instance::instance() {
+		this->Index 	= -1;
+		this->Context 	= nullptr;
+	}
+
+	mesh::instance::instance(int aMeshIndex, uint aVertexCount, const std::vector<bone>& aBoneData) : instance() {
+		this->Index 		= aMeshIndex;
+		this->Vertex 		= std::vector<vertex::weight>(aVertexCount);
+		this->Bone 			= aBoneData;
+		// Generate the corresponding vertex buffer which will supply the mesh
+		// instance the needed bone animation data.
+		for (size_t i = 0; i < Vertex.size(); i++) {
+			Vertex[i].BoneID 		= math::vec4<uint>(UINT32_MAX, UINT32_MAX, UINT32_MAX, UINT32_MAX);
+			Vertex[i].BoneWeight 	= math::vec4<float>(0.0f, 0.0f, 0.0f, 0.0f);
+
+			// Group Bone Weights By Vertex Index.
+			std::vector<bone::weight> VertexBoneWeight;
+			for (size_t j = 0; j < Bone.size(); j++) {
+				for (size_t k = 0; k < Bone[j].Vertex.size(); k++) {
+					// If the vertex index matches the bone vertex index, then then copy over.
+					if (i == Bone[j].Vertex[k].ID) {
+						// Uses insert sort to keep the weights sorted from largest to smallest.
+						// {  0,  1   2,  3, 4 }
+						// { 69, 25, 21, 10, 4 } <- 15
+						// Insert at index 3
+						// { 69, 25, 21, 15, 10, 4 }
+						for (size_t a = 0; a < VertexBoneWeight.size(); a++) {
+							if (VertexBoneWeight[a].Weight < Bone[j].Vertex[k].Weight) {
+								VertexBoneWeight.insert(VertexBoneWeight.begin() + a, Bone[j].Vertex[k]);
+								break;
+							}
+						}
+					}
+				}
+			}
+
+			// Will take the first and largest elements.
+			for (size_t j = 0; j < std::min((size_t)4, VertexBoneWeight.size()); j++) {
+				Vertex[i].BoneID[j] 		= VertexBoneWeight[j].ID;
+				Vertex[i].BoneWeight[j] 	= VertexBoneWeight[j].Weight;
+			}
+		}
+	}
+
+	void mesh::instance::update(double DeltaTime) {
+
 	}
 
 	mesh::mesh() {
 		this->BoundingRadius = 0.0f;
 	}
 
-	mesh::mesh(gcl::context* aContext, const std::vector<vertex>& aVertexData, const index& aIndexData, const std::vector<bone>& aBoneData) : mesh() {
+	mesh::mesh(gcl::context* aContext, const std::vector<vertex>& aVertexData, const index& aIndexData) : mesh() {
 		this->Vertex 	= aVertexData;
 		this->Index 	= aIndexData;
-		this->Bone 		= aBoneData;
 		this->generate_device_representation(aContext);
 	}
 
@@ -55,26 +105,23 @@ namespace geodesuka::core::graphics {
 				buffer::usage::INDEX | buffer::usage::TRANSFER_SRC | buffer::usage::TRANSFER_DST
 			);
 			// Index buffer Create Info
-			gcl::buffer::create_info BBCI(
-				device::memory::HOST_VISIBLE | device::memory::DEVICE_LOCAL,
-				buffer::usage::INDEX | buffer::usage::TRANSFER_SRC | buffer::usage::TRANSFER_DST
-			);
+			// gcl::buffer::create_info BBCI(
+			// 	device::memory::HOST_VISIBLE | device::memory::DEVICE_LOCAL,
+			// 	buffer::usage::INDEX | buffer::usage::TRANSFER_SRC | buffer::usage::TRANSFER_DST
+			// );
 			VertexBuffer = buffer(Context, VBCI, Vertex.size() * sizeof(vertex), (void*)Vertex.data());
 			// wtf this is legal?
 			// IndexBuffer = std::vector<gcl::buffer>(1, buffer(Context, IBCI, aIndexData.size() * sizeof(ushort), (void*)aIndexData.data()));
-			// IndexBuffer = std::vector<buffer>(Face.size());
-			// for (size_t i = 0; i < Face.size(); i++) {
-			// 	switch(Face[i].IndexType) {
-			// 	case VK_INDEX_TYPE_UINT16:
-			// 		IndexBuffer[i] = buffer(Context, IBCI, Face[i].H16.size() * sizeof(ushort), (void*)Face[i].H16.data());
-			// 		break;
-			// 	case VK_INDEX_TYPE_UINT32:
-			// 	IndexBuffer[i] = buffer(Context, IBCI, Face[i].H32.size() * sizeof(uint), (void*)Face[i].H32.data());
-			// 		break;
-			// 	}
-			// }
-			// TODO: Generate Bone Buffer Data. (Must be a linearized array!)
-			BoneBuffer = buffer(Context, BBCI, Bone.size() * sizeof(bone), (void*)Bone.data());
+			switch (Index.Type) {
+			case VK_INDEX_TYPE_UINT16:
+				IndexBuffer = buffer(Context, IBCI, Index.Data16.size() * sizeof(ushort), (void*)Index.Data16.data());
+				break;
+			case VK_INDEX_TYPE_UINT32:
+				IndexBuffer = buffer(Context, IBCI, Index.Data32.size() * sizeof(uint), (void*)Index.Data32.data());
+				break;
+			default:
+				break;
+			}
 		}
 	}
 

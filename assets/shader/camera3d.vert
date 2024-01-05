@@ -9,11 +9,12 @@ layout (location = 0) in vec3   VertexPosition;
 layout (location = 1) in vec2   VertexNormal;
 layout (location = 2) in vec4   VertexTangent;
 layout (location = 3) in vec3   VertexBitangent;
-layout (location = 4) in uvec4  VertexBoneID;
-layout (location = 5) in vec4   VertexBoneWeight;
 // Mesh Texturing & Coloring Data
-layout (location = 6) in vec3   VertexTextureCoordinate;
-layout (location = 7) in vec3   VertexColor;
+layout (location = 4) in vec3   VertexTextureCoordinate;
+layout (location = 5) in vec3   VertexColor;
+// Bone Data (Seperate Instance Buffer)
+layout (location = 6) in uvec4  VertexBoneID;
+layout (location = 7) in vec4   VertexBoneWeight;
 
 // Transforms Vertices to Model Space.
 layout (set = 0, binding = 0) uniform MeshUBO {

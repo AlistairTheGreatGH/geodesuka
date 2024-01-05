@@ -24,14 +24,15 @@ namespace geodesuka::core::graphics {
 
 		struct node {
 			
-			node*					Root;
-			node*					Parent;
-			std::vector<node>		Child;
-			std::string				Name;
-			std::vector<int> 		MeshIndex;
-			math::mat4<float>		Transformation;
-			gcl::context* 			Context;
-			gcl::buffer 			UniformBuffer;
+			// Traversal Data
+			node*								Root;
+			node*								Parent;
+			std::vector<node>					Child;
+
+			// Metadata
+			std::string							Name;
+			math::mat4<float>					Transformation;
+			std::vector<mesh::instance> 		MeshInstance;
 
 			node();
 			node(const node& aInput);
@@ -42,10 +43,12 @@ namespace geodesuka::core::graphics {
 			node& operator=(const node& aRhs);
 			node& operator=(node&& aRhs) noexcept;
 
+			// Update the node hierarchy. (Applies Node & Mesh Animations)
+			void update(const animation* aAnimation, double aDeltaTime);	
 			// Total Number of Nodes from this point on.
-			int count() const;
+			size_t node_count() const;
 			// Counts the total number of mesh references in the tree.
-			int mesh_reference_count() const;
+			size_t instance_count() const;
 			// Turns entire node tree into linearized array with multiplied transforms.
 			node linearize() const;
 			// For this node, it will calculate the world transform for the node.
@@ -70,8 +73,6 @@ namespace geodesuka::core::graphics {
 		// Node Hierarchy
 		std::string							Name;
 		node								Hierarchy;			// Root Node Hierarchy 
-		node 								LeafList;			// 
-		std::vector<node> 					MeshNode;			// Contains List Mesh Transforms
 
 		// Resources
 		gcl::context*						Context;
@@ -90,10 +91,6 @@ namespace geodesuka::core::graphics {
 		~model();
 
 		void update(double aDeltaTime);
-
-		// Calculates the total number of command buffers needed to
-		// represent the model.
-		size_t command_buffer_count() const;
 
 	private:
 

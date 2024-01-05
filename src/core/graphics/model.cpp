@@ -13,25 +13,69 @@ static Assimp::Importer* ModelImporter = nullptr;
 
 namespace geodesuka::core::graphics {
 
-	static void fill_and_traverse(model::node& aMeshNode, aiNode* aAssimpNode) {
-		aMeshNode.Child.resize(aAssimpNode->mNumChildren);
-		for (size_t i = 0; i < aMeshNode.Child.size(); i++) {
-			aMeshNode[i].Root = aMeshNode.Root;
-			aMeshNode[i].Parent = &aMeshNode;
-			fill_and_traverse(aMeshNode[i], aAssimpNode->mChildren[i]);
+	static void fill_and_traverse(const aiScene* aScene, model::node& aModelNode, aiNode* aAssimpNode) {
+		// Copy over traversal data
+		aModelNode.Child.resize(aAssimpNode->mNumChildren);
+		for (size_t i = 0; i < aModelNode.Child.size(); i++) {
+			aModelNode[i].Root 	= aModelNode.Root;
+			aModelNode[i].Parent = &aModelNode;
+			fill_and_traverse(aScene, aModelNode[i], aAssimpNode->mChildren[i]);
 		}
-		aMeshNode.Name = aAssimpNode->mName.C_Str();
-		aMeshNode.MeshIndex.resize(aAssimpNode->mNumMeshes);
-		for (size_t i = 0; i < aMeshNode.MeshIndex.size(); i++) {
-			aMeshNode.MeshIndex[i] = aAssimpNode->mMeshes[i];
-		}
-		aAssimpNode->mTransformation.a1;
-		aMeshNode.Transformation = math::mat4<float>(
+
+		// Copy over naming and transformation node meta data.
+		aModelNode.Name 		= aAssimpNode->mName.C_Str();
+		aModelNode.Transformation = math::mat4<float>(
 			aAssimpNode->mTransformation.a1, aAssimpNode->mTransformation.a2, aAssimpNode->mTransformation.a3, aAssimpNode->mTransformation.a4,
 			aAssimpNode->mTransformation.b1, aAssimpNode->mTransformation.b2, aAssimpNode->mTransformation.b3, aAssimpNode->mTransformation.b4,
 			aAssimpNode->mTransformation.c1, aAssimpNode->mTransformation.c2, aAssimpNode->mTransformation.c3, aAssimpNode->mTransformation.c4,
 			aAssimpNode->mTransformation.d1, aAssimpNode->mTransformation.d2, aAssimpNode->mTransformation.d3, aAssimpNode->mTransformation.d4
 		);
+
+		// ASSIMP RANT: This is fucking stupid, what's the point
+		// of mesh instancing if the fucking bone animation is 
+		// tied to the mesh object itself instead of its instance?
+		//
+		// For future development, the bone association which
+		// is the information needed to animate a mesh should
+		// be tied to its instance and not the actual mesh object
+		// itself. Instancing only makes sense if you want to
+		// reuse an already existing mesh multiple times, and thus
+		// you instance it. It then logically follows that the 
+		// bone animation data should be tied to its instance
+		// rather than the mesh object itself. Tying the bone 
+		// structure to the mesh object quite literally defeats
+		// the point of mesh instancing, at least for animated
+		// meshes. Rant Over
+
+		// This works by not only copying over the mesh instancing index, but
+		// also copies over the vertex weight data which informs how to deform
+		// the mesh instance. Used for animations.
+		aModelNode.MeshInstance.resize(aAssimpNode->mNumMeshes);
+		for (int i = 0; i < aAssimpNode->mNumMeshes; i++) {
+			int MeshIndex 						= aAssimpNode->mMeshes[i];
+			const aiMesh* Mesh 					= aScene->mMeshes[MeshIndex];
+			std::vector<mesh::bone> BoneData(Mesh->mNumBones);
+			for (size_t j = 0; j < BoneData.size(); j++) {
+				aiBone* Bone = Mesh->mBones[j];
+				// Get the name of the bone.
+				BoneData[j].Name 	= Bone->mName.C_Str();
+				// Copy over vertex affecting weights per bone.
+				BoneData[j].Vertex = std::vector<mesh::bone::weight>(Bone->mNumWeights);
+				for (size_t k = 0; k < BoneData[j].Vertex.size(); k++) {
+					BoneData[j].Vertex[k].ID 		= Bone->mWeights[k].mVertexId;
+					BoneData[j].Vertex[k].Weight 	= Bone->mWeights[k].mWeight;
+				}
+				// Copy over bind pose matrix. This converts vertices from mesh space to bone space.
+				BoneData[j].Offset = math::mat4<float>(
+					Bone->mOffsetMatrix.a1, Bone->mOffsetMatrix.a2, Bone->mOffsetMatrix.a3, Bone->mOffsetMatrix.a4,
+					Bone->mOffsetMatrix.b1, Bone->mOffsetMatrix.b2, Bone->mOffsetMatrix.b3, Bone->mOffsetMatrix.b4,
+					Bone->mOffsetMatrix.c1, Bone->mOffsetMatrix.c2, Bone->mOffsetMatrix.c3, Bone->mOffsetMatrix.c4,
+					Bone->mOffsetMatrix.d1, Bone->mOffsetMatrix.d2, Bone->mOffsetMatrix.d3, Bone->mOffsetMatrix.d4
+				);
+			}
+			// Load Mesh Instance Data
+			aModelNode.MeshInstance[i] = mesh::instance(MeshIndex, Mesh->mNumVertices, BoneData);
+		}
 	}
 
 	static void traverse(const aiScene* aScene, aiNode* aNode) {
@@ -84,10 +128,8 @@ namespace geodesuka::core::graphics {
 	model::node& model::node::operator=(const node& aRhs) {
 		if (this == &aRhs) return *this;
 		this->Name					= aRhs.Name;
-		this->MeshIndex				= aRhs.MeshIndex;
 		this->Transformation		= aRhs.Transformation;
-		this->Context				= aRhs.Context;
-		this->UniformBuffer			= aRhs.UniformBuffer;
+		this->MeshInstance 			= aRhs.MeshInstance;
 		this->Child.resize(aRhs.Child.size());
 		for (size_t i = 0; i < aRhs.Child.size(); i++) {
 			this->Child[i].Root 		= this->Root;
@@ -106,26 +148,40 @@ namespace geodesuka::core::graphics {
 		return this->Child[aIndex];
 	}
 
-	int model::node::count() const {
-		int TotalCount = 1;
+	void model::node::update(const animation* aAnimation, double aDeltaTime) {
+		// Work done here will start at the root
+		// of the node hierarchy.
+
+		// Cycle Through Animation;
+		for (node& Chd : Child) {
+			Chd.update(aAnimation, aDeltaTime);
+		}
+
+		// Work done here implies that the leafs
+		// will be updated first.
+
+	}
+
+	size_t model::node::node_count() const {
+		size_t TotalCount = 1;
 		for (const node& Chd : Child) {
-			TotalCount += Chd.count();
+			TotalCount += Chd.node_count();
 		}
 		return TotalCount;
 	}
 
-	int model::node::mesh_reference_count() const {
-		int MeshCount = 0;
-		MeshCount += this->MeshIndex.size();
+	size_t model::node::instance_count() const {
+		size_t MeshCount = 0;
 		for (const node& Chd : Child) {
-			MeshCount += Chd.mesh_reference_count();
+			MeshCount += Chd.MeshInstance.size();
+			MeshCount += Chd.instance_count();
 		}
 		return MeshCount;
 	}
 
 	model::node model::node::linearize() const {
 		node Linear;
-		Linear.Child.resize(this->count());
+		Linear.Child.resize(this->node_count());
 		for (node& Chd : Linear.Child) {
 			Chd.Root	= &Linear;
 			Chd.Parent	= &Linear;
@@ -146,7 +202,7 @@ namespace geodesuka::core::graphics {
 	}
 
 	void model::node::linearize(int& aOffset, const node& aNode) {
-		this->Child[aOffset].MeshIndex 			= aNode.MeshIndex;
+		//this->Child[aOffset].MeshIndex 			= aNode.MeshIndex;
 		this->Child[aOffset].Name				= aNode.Name;
 		this->Child[aOffset].Transformation		= aNode.global_transform();
 		aOffset += 1;
@@ -164,27 +220,23 @@ namespace geodesuka::core::graphics {
 
 	void model::node::clear() {
 		this->Child.clear();
-		this->Name = "";
-		this->MeshIndex.clear();
-		this->UniformBuffer = gcl::buffer();
+		this->MeshInstance.clear();
 		this->zero_out();
 	}
 
 	void model::node::zero_out() {
-		Root			= this;
-		Parent			= nullptr;
-		Transformation = math::mat4<float>(
+		this->Root				= this;
+		this->Parent			= nullptr;
+		this->Name				= "";
+		this->Transformation 	= math::mat4<float>(
 			1.0f, 	0.0f, 	0.0f, 	0.0f,
 			0.0f,	1.0f, 	0.0f, 	0.0f,
 			0.0f,	0.0f, 	1.0f, 	0.0f,
 			0.0f,	0.0f, 	0.0f, 	1.0f
 		);
-		Context 		= nullptr;
 	}
 
-	model::model() {
-
-	}
+	model::model() {}
 
 	model::model(const char* aFilePath) {
 		if (aFilePath == NULL) return;
@@ -202,15 +254,18 @@ namespace geodesuka::core::graphics {
 				std::cout << "\tBone Name: " << Scene->mMeshes[i]->mBones[j]->mName.C_Str() << std::endl;
 			}
 		}
-		for (const node& Chd : this->LeafList.Child) {
-			std::cout << Chd.Name << std::endl;
-		}
+
+		// Get Name of Model.
+		this->Name = Scene->mName.C_Str();
 
 		// Extract Scene Hiearchy
-		fill_and_traverse(this->Hierarchy, Scene->mRootNode);
+		fill_and_traverse(Scene, this->Hierarchy, Scene->mRootNode);
 
 		// Linearize Node Hierarchy
-		this->LeafList = this->Hierarchy.linearize();
+		// this->LeafList = this->Hierarchy.linearize();
+		// for (const node& Chd : this->LeafList.Child) {
+		// 	std::cout << Chd.Name << std::endl;
+		// }
 		
 		this->Mesh			= std::vector<mesh>(Scene->mNumMeshes);
 		this->Material		= std::vector<material>(Scene->mNumMaterials);
@@ -302,22 +357,22 @@ namespace geodesuka::core::graphics {
 			}
 
 			// Load Bone Data
-			std::vector<mesh::bone> BoneData(Scene->mMeshes[i]->mNumBones);
-			for (size_t j = 0; j < BoneData.size(); j++) {
-				aiBone* Bone			= Scene->mMeshes[i]->mBones[j];
-				BoneData[j].Name		= Bone->mName.C_Str();
-				BoneData[j].Vertex		= std::vector<mesh::bone::vertex_weight>(Bone->mNumWeights);
-				for (size_t k = 0; k < BoneData[j].Vertex.size(); k++) {
-					BoneData[j].Vertex[k].ID 		= Bone->mWeights[k].mVertexId;
-					BoneData[j].Vertex[k].Weight 	= Bone->mWeights[k].mWeight;
-				}
-				BoneData[j].Offset = math::mat4<float>(
-					Bone->mOffsetMatrix.a1, Bone->mOffsetMatrix.a2, Bone->mOffsetMatrix.a3, Bone->mOffsetMatrix.a4,
-					Bone->mOffsetMatrix.b1, Bone->mOffsetMatrix.b2, Bone->mOffsetMatrix.b3, Bone->mOffsetMatrix.b4,
-					Bone->mOffsetMatrix.c1, Bone->mOffsetMatrix.c2, Bone->mOffsetMatrix.c3, Bone->mOffsetMatrix.c4,
-					Bone->mOffsetMatrix.d1, Bone->mOffsetMatrix.d2, Bone->mOffsetMatrix.d3, Bone->mOffsetMatrix.d4
-				);
-			}
+			// std::vector<mesh::bone> BoneData(Scene->mMeshes[i]->mNumBones);
+			// for (size_t j = 0; j < BoneData.size(); j++) {
+			// 	aiBone* Bone			= Scene->mMeshes[i]->mBones[j];
+			// 	BoneData[j].Name		= Bone->mName.C_Str();
+			// 	BoneData[j].Vertex		= std::vector<mesh::vertex::weight>(Bone->mNumWeights);
+			// 	for (size_t k = 0; k < BoneData[j].Vertex.size(); k++) {
+			// 		BoneData[j].Vertex[k].ID 		= Bone->mWeights[k].mVertexId;
+			// 		BoneData[j].Vertex[k].Weight 	= Bone->mWeights[k].mWeight;
+			// 	}
+			// 	BoneData[j].Offset = math::mat4<float>(
+			// 		Bone->mOffsetMatrix.a1, Bone->mOffsetMatrix.a2, Bone->mOffsetMatrix.a3, Bone->mOffsetMatrix.a4,
+			// 		Bone->mOffsetMatrix.b1, Bone->mOffsetMatrix.b2, Bone->mOffsetMatrix.b3, Bone->mOffsetMatrix.b4,
+			// 		Bone->mOffsetMatrix.c1, Bone->mOffsetMatrix.c2, Bone->mOffsetMatrix.c3, Bone->mOffsetMatrix.c4,
+			// 		Bone->mOffsetMatrix.d1, Bone->mOffsetMatrix.d2, Bone->mOffsetMatrix.d3, Bone->mOffsetMatrix.d4
+			// 	);
+			// }
 
 			// for (size_t j = 0; j < BoneData.size(); j++) {
 			// 	for (size_t k = 0; k < BoneData[j].Vertex.size(); k++) {
@@ -347,15 +402,16 @@ namespace geodesuka::core::graphics {
 			// }
 
 			// Create Mesh Object
-			this->Mesh[i] = mesh(nullptr, VertexData, IndexData, BoneData);
+			this->Mesh[i] = mesh(nullptr, VertexData, IndexData);
 			this->Mesh[i].Name = Scene->mMeshes[i]->mName.C_Str();
 			this->Mesh[i].MaterialIndex = Scene->mMeshes[i]->mMaterialIndex;
 		}
 
+		// I have no fucking clue how to handle materials.
 		for (size_t i = 0; i < Scene->mNumMaterials; i++) {
 			aiMaterial *Mat = Scene->mMaterials[i];
 			for (size_t j = 0; j < Mat->mNumProperties; j++) {
-
+				
 			}
 		}
 
@@ -376,16 +432,7 @@ namespace geodesuka::core::graphics {
 	}
 
 	void model::update(double aDeltaTime) {
-		
-	}
-
-	// MeshInstanceCount * FaceCount
-	size_t model::command_buffer_count() const {
-		size_t CommandBufferCount = 0;
-		for (const node& Chd : this->Hierarchy.Child) {
-			CommandBufferCount += Chd.mesh_reference_count();
-		}
-		return CommandBufferCount;
+		this->Hierarchy.update(aDeltaTime);
 	}
 
 	bool model::initialize() {

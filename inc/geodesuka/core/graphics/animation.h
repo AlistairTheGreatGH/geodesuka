@@ -25,6 +25,7 @@ namespace geodesuka::core::graphics {
 			std::string 									Name;
 			std::vector<key<math::vec3<float>>> 			PositionKey;
 			std::vector<key<math::quaternion<float>>> 		RotationKey;
+			std::vector<key<math::quaternion<float>>> 		ScalingKey;
 		};
 
 		struct mesh_anim {
@@ -37,7 +38,8 @@ namespace geodesuka::core::graphics {
 		std::vector<node_anim> NodeAnim;
 		std::vector<mesh_anim> MeshAnim;
 
-
+		animation();
+		animation();
 
 	private:
 
