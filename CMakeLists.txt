@@ -48,6 +48,12 @@ FetchContent_Declare(
     GIT_TAG        VER-2-12-1
 )
 
+FetchContent_Declare(
+    glTF-Sample-Models
+    GIT_REPOSITORY https://github.com/KhronosGroup/glTF-Sample-Models.git
+    GIT_TAG        main
+)
+
 set(GLFW_BUILD_DOCS OFF CACHE BOOL " " FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL " " FORCE)
 set(GLFW_BUILD_TESTS OFF CACHE BOOL " " FORCE)
@@ -63,6 +69,7 @@ FetchContent_MakeAvailable(glfw)
 FetchContent_MakeAvailable(stb)
 FetchContent_MakeAvailable(assimp)
 FetchContent_MakeAvailable(freetype)
+FetchContent_MakeAvailable(glTF-Sample-Models)
 
 # Modifies the ftoption file so it can compile while assimp uses zlib.
 file(READ ${CMAKE_SOURCE_DIR}/dep/freetype-build/include/freetype/config/ftoption.h FreetypeConfig)
