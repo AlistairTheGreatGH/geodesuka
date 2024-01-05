@@ -4,6 +4,7 @@
 
 #include <string>
 #include <vector>
+#include <map>
 
 #include "../math.h"
 
@@ -22,7 +23,6 @@ namespace geodesuka::core::graphics {
 		};
 
 		struct node_anim {
-			std::string 									Name;
 			std::vector<key<math::vec3<float>>> 			PositionKey;
 			std::vector<key<math::quaternion<float>>> 		RotationKey;
 			std::vector<key<math::quaternion<float>>> 		ScalingKey;
@@ -32,14 +32,15 @@ namespace geodesuka::core::graphics {
 
 		};
 
-		std::string Name;
-		double Duration;
-		double TicksPerSecond;
-		std::vector<node_anim> NodeAnim;
-		std::vector<mesh_anim> MeshAnim;
+		std::string 						Name;
+		double 								Duration;
+		double 								TicksPerSecond;
+		std::map<std::string, node_anim> 	NodeAnimMap;
+		std::map<std::string, mesh_anim> 	MeshAnimMap;
 
 		animation();
-		animation();
+
+		math::mat4<float> operator[](double aT) const;
 
 	private:
 

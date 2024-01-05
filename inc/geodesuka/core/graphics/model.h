@@ -24,6 +24,7 @@ namespace geodesuka::core::graphics {
 
 		struct node {
 			
+
 			// Traversal Data
 			node*								Root;
 			node*								Parent;
@@ -33,6 +34,7 @@ namespace geodesuka::core::graphics {
 			std::string							Name;
 			math::mat4<float>					Transformation;
 			std::vector<mesh::instance> 		MeshInstance;
+			const animation* 					Animation;
 
 			node();
 			node(const node& aInput);
@@ -43,20 +45,23 @@ namespace geodesuka::core::graphics {
 			node& operator=(const node& aRhs);
 			node& operator=(node&& aRhs) noexcept;
 
+			// Choose Animation Set to Animate Node Hierarchy with.
+			void play(const animation* aAnimation);
 			// Update the node hierarchy. (Applies Node & Mesh Animations)
-			void update(const animation* aAnimation, double aDeltaTime);	
+			void update(double aTime);	
 			// Total Number of Nodes from this point on.
 			size_t node_count() const;
 			// Counts the total number of mesh references in the tree.
 			size_t instance_count() const;
-			// Turns entire node tree into linearized array with multiplied transforms.
-			node linearize() const;
 			// For this node, it will calculate the world transform for the node.
-			math::mat4<float> global_transform() const;
+			math::mat4<float> global_transform(double aTime) const;
 
 		private:
 
-			void linearize(int& aOffset, const node& aNode);
+			// Turns entire node tree into linearized array with multiplied transforms.
+			// node linearize() const;
+
+			//void linearize(int& aOffset, const node& aNode);
 
 			void set_root(node* aRoot);
 
@@ -73,6 +78,7 @@ namespace geodesuka::core::graphics {
 		// Node Hierarchy
 		std::string							Name;
 		node								Hierarchy;			// Root Node Hierarchy 
+		double 								Time;
 
 		// Resources
 		gcl::context*						Context;

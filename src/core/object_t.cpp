@@ -75,11 +75,11 @@ namespace geodesuka::core {
 
 		// ---------- Command Buffers ---------- //
 
-		// Creates command buffers for render operation.
-		this->DrawCommand.resize(aCamera3D->Frame.size());
-		for (size_t i = 0; i < aCamera3D->Frame.size(); i++) {
-			this->DrawCommand[i] = aCamera3D->CommandPool->allocate(aObject->Model->command_buffer_count());
-		}
+		//// Creates command buffers for render operation.
+		//this->DrawCommand.resize(aCamera3D->Frame.size());
+		//for (size_t i = 0; i < aCamera3D->Frame.size(); i++) {
+		//	this->DrawCommand[i] = aCamera3D->CommandPool->allocate(aObject->Model->command_buffer_count());
+		//}
 
 		//for (size_t i = 0; i < aCamera3D->Frame.size(); i++) {
 		//	size_t j = 0;

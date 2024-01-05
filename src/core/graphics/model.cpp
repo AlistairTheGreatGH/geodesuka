@@ -130,6 +130,7 @@ namespace geodesuka::core::graphics {
 		this->Name					= aRhs.Name;
 		this->Transformation		= aRhs.Transformation;
 		this->MeshInstance 			= aRhs.MeshInstance;
+		this->Animation 			= aRhs.Animation;
 		this->Child.resize(aRhs.Child.size());
 		for (size_t i = 0; i < aRhs.Child.size(); i++) {
 			this->Child[i].Root 		= this->Root;
@@ -148,13 +149,30 @@ namespace geodesuka::core::graphics {
 		return this->Child[aIndex];
 	}
 
-	void model::node::update(const animation* aAnimation, double aDeltaTime) {
+	void model::node::play(const animation* aAnimation) {
+		// Will set every node in the hierarchy to play the animation.
+		this->Animation = aAnimation;
+		for (node& Chd : Child) {
+			Chd.play(aAnimation);
+		}
+	}
+
+	void model::node::update(double aTime) {
 		// Work done here will start at the root
 		// of the node hierarchy.
 
+		// We are going to start updating the root first, as
+		// the tranformations where meshes are instances at child
+		// nodes will need the latest and most updated transformations
+		// for the respective parent nodes.
+
+		for (mesh::instance& MI : MeshInstance) {
+			MI.update(aTime);
+		}
+
 		// Cycle Through Animation;
 		for (node& Chd : Child) {
-			Chd.update(aAnimation, aDeltaTime);
+			Chd.update(aTime);
 		}
 
 		// Work done here implies that the leafs
@@ -179,37 +197,45 @@ namespace geodesuka::core::graphics {
 		return MeshCount;
 	}
 
-	model::node model::node::linearize() const {
-		node Linear;
-		Linear.Child.resize(this->node_count());
-		for (node& Chd : Linear.Child) {
-			Chd.Root	= &Linear;
-			Chd.Parent	= &Linear;
-		}
-		int LinearOffset = 0;
-		Linear.linearize(LinearOffset, *this);
-		return Linear;
-	}
+	//model::node model::node::linearize() const {
+	//	node Linear;
+	//	Linear.Child.resize(this->node_count());
+	//	for (node& Chd : Linear.Child) {
+	//		Chd.Root	= &Linear;
+	//		Chd.Parent	= &Linear;
+	//	}
+	//	int LinearOffset = 0;
+	//	Linear.linearize(LinearOffset, *this);
+	//	return Linear;
+	//}
 
-	math::mat4<float> model::node::global_transform() const {
-		// TODO: Do not forget there are animations that alter this.
-		if (this->Parent != nullptr) {
-			return this->Parent->global_transform() * this->Transformation;
+	math::mat4<float> model::node::global_transform(double aTime) const {
+		math::mat4<float> NodeTransform;
+		if (this->Animation != nullptr) {
+			// TODO: Support Node Animation blending.
+			// Animation Detected, use Node Animation Override.
+			
 		}
 		else {
-			return this->Transformation;
+			NodeTransform = this->Transformation;
+		}
+		if (this->Parent != nullptr) {
+			return this->Parent->global_transform(0.0f) * NodeTransform;
+		}
+		else {
+			return NodeTransform;
 		}
 	}
 
-	void model::node::linearize(int& aOffset, const node& aNode) {
-		//this->Child[aOffset].MeshIndex 			= aNode.MeshIndex;
-		this->Child[aOffset].Name				= aNode.Name;
-		this->Child[aOffset].Transformation		= aNode.global_transform();
-		aOffset += 1;
-		for (const node& Chd : aNode.Child) {
-			this->linearize(aOffset, Chd);
-		}
-	}
+	//void model::node::linearize(int& aOffset, const node& aNode) {
+	//	//this->Child[aOffset].MeshIndex 			= aNode.MeshIndex;
+	//	this->Child[aOffset].Name				= aNode.Name;
+	//	this->Child[aOffset].Transformation		= aNode.global_transform();
+	//	aOffset += 1;
+	//	for (const node& Chd : aNode.Child) {
+	//		this->linearize(aOffset, Chd);
+	//	}
+	//}
 
 	void model::node::set_root(node* aRoot) {
 		this->Root = aRoot;
@@ -234,6 +260,7 @@ namespace geodesuka::core::graphics {
 			0.0f,	0.0f, 	1.0f, 	0.0f,
 			0.0f,	0.0f, 	0.0f, 	1.0f
 		);
+		this->Animation 		= nullptr;
 	}
 
 	model::model() {}
@@ -432,6 +459,9 @@ namespace geodesuka::core::graphics {
 	}
 
 	void model::update(double aDeltaTime) {
+		Time += aDeltaTime;
+		// Choose animation here.
+		this->Hierarchy.play(nullptr);
 		this->Hierarchy.update(aDeltaTime);
 	}
 
