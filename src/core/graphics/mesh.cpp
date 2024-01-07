@@ -68,7 +68,28 @@ namespace geodesuka::core::graphics {
 	}
 
 	void mesh::instance::update(double DeltaTime) {
+		// The goal here is to update the Bone Buffer in the vertex shader.
+		std::vector<math::mat4<float>> TransformData(1 + 2*Bone.size());
 
+		// This is the Mesh Instance Transform. This transform is applied to mesh space vertices
+		// directly is no bone structure is altering the vertices. It takes the mesh space vertices
+		// and transforms them to root model space. This is directly applied to the vertices.
+		TransformData[0] = this->Transform;
+
+		// This is the current transform data for each bone modified by the current animations structure.
+		for (size_t i = 0; i < Bone.size(); i++) {
+			TransformData[i + 1] = Bone[i].Transform;
+		}
+
+		// This is the offset matrix data that transforms vertices from mesh space to bone space.
+		// Needed to transform vertices from bone space to mesh space for animated bones to animate
+		// the mesh.
+		for (size_t i = 0; i < Bone.size(); i++) {
+			TransformData[i + Bone.size() + 1] = Bone[i].Offset;
+		}
+
+		// Send data to the GPU Uniform Buffer.
+		this->BoneBuffer.write(0, TransformData.data(), 0, TransformData.size() * sizeof(math::mat4<float>));
 	}
 
 	mesh::mesh() {

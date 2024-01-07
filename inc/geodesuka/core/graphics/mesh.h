@@ -53,8 +53,8 @@ namespace geodesuka::core::graphics {
 
 		struct instance {
 			// Host Memory Objects
-			math::mat4<float> 				Transform;
 			int 							Index;
+			math::mat4<float> 				Transform;
 			std::vector<vertex::weight> 	Vertex;
 			std::vector<bone>				Bone;
 

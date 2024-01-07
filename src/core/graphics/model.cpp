@@ -11,6 +11,55 @@
 
 static Assimp::Importer* ModelImporter = nullptr;
 
+/*
+				  N[0]
+				   |
+	 ---------------------------------
+	 |               |               |
+   N[1]             N[2]             N[3]
+			  ---------        -----------
+			  |       |        |    |    |
+			 N[4]    N[5]     N[6] N[7] N[8]
+*/
+
+//tex:
+// When I am denoting raw vertices in mesh space for the 3d model, I will
+// denote them as $ \vec{v} $ so they are not confused with bone space vertices
+// $ \vec{v}^{bs} $. This is to eliminate ambiguity in mathematical symbols which
+// many don't care for when describing something. The being said, in the node hierarchy
+// it is neccessary to map mesh space vertices $ \vec{v} \rightarrow \vec{v}^{bs} $
+// so that the node hierarchy and its associated animations can then be applied to 
+// the mesh. 
+
+//tex:
+// When mapping mesh space vertices to bone space vertices, the offset matrix 
+// $ A^{offset} $ provided in the bone structure associated with the mesh instance 
+// maps them with the following relationship.
+// $$ \vec{v}^{bs} = A^{offset} \vec{v} $$
+
+//tex:
+// $$ S = \{ B_{1}, B_{2}, \dots B_{n} \} \quad \quad \forall \; i \in \{ 1, 2, \dots n \} $$
+// $$ B = \{ A^{bone}, A^{offset}, w \} $$
+// When it comes to each mesh instance, they carry bone structures which 
+// designating the vertices they are affecting along with a weight $ w_{i} $ indicating
+// how much a bone affects the vertex in question. The thing is for convience
+// in the per-vertex shader, only four vertex weights with the largest
+// weights are passed into the vertex shader, but to maintain mathematical
+// generality, the list can be longer. 
+// $$ \vec{v}_{\text{model space}} =  \bigg( \sum_{i} A_{i}^{bone} \cdot A_{i}^{offset} w_{i} \bigg) \vec{v} $$
+// If there is no bone structure applied to the mesh instance, then the global transform where the mesh
+// instance exists will suffice.
+// $$ \vec{v}_{\text{model space}} = A^{\text{mesh instance}} \vec{v} $$
+
+//tex:
+// How the entire node hierarchy works is that at every node in the 
+// tree there exists a transformation matrix which informs how to transform
+// on object in the node's space to its parent's node space. The Root node's
+// space is the space of the entire model. The cumulative transform from each
+// node is thus the map from the node's local space to the model space of the
+// object.
+
+
 namespace geodesuka::core::graphics {
 
 	static void fill_and_traverse(const aiScene* aScene, model::node& aModelNode, aiNode* aAssimpNode) {
@@ -149,26 +198,21 @@ namespace geodesuka::core::graphics {
 		return this->Child[aIndex];
 	}
 
-	void model::node::play(const animation* aAnimation) {
-		// Will set every node in the hierarchy to play the animation.
-		this->Animation = aAnimation;
+	model::node& model::node::operator[](const char* aName) {
 		for (node& Chd : Child) {
-			Chd.play(aAnimation);
+			if (Chd.Name == aName) {
+				return Chd;
+			}
+			else {
+				return Chd[aName];
+			}
 		}
+		throw std::runtime_error("Node Not Found");
 	}
 
 	void model::node::update(double aTime) {
 		// Work done here will start at the root
 		// of the node hierarchy.
-
-		// We are going to start updating the root first, as
-		// the tranformations where meshes are instances at child
-		// nodes will need the latest and most updated transformations
-		// for the respective parent nodes.
-
-		for (mesh::instance& MI : MeshInstance) {
-			MI.update(aTime);
-		}
 
 		// Cycle Through Animation;
 		for (node& Chd : Child) {
@@ -178,6 +222,19 @@ namespace geodesuka::core::graphics {
 		// Work done here implies that the leafs
 		// will be updated first.
 
+		// For each mesh instance, and for each bone, update the 
+		// bone transformations according to their respective
+		// animation object.
+		for (mesh::instance& MI : MeshInstance) {
+			// This is only used to tranform mesh instance vertices without bone animation.
+			MI.Transform = this->global_transform(aTime);
+			for (mesh::bone& B : MI.Bone) {
+				// Update Bone Transformations from Bone Hierarchies
+				B.Transform = (*this->Root)[B.Name.c_str()].global_transform(aTime);
+			}
+			// Update Bone Buffer Date GPU side.
+			MI.update(aTime);
+		}
 	}
 
 	size_t model::node::node_count() const {
@@ -197,45 +254,40 @@ namespace geodesuka::core::graphics {
 		return MeshCount;
 	}
 
-	//model::node model::node::linearize() const {
-	//	node Linear;
-	//	Linear.Child.resize(this->node_count());
-	//	for (node& Chd : Linear.Child) {
-	//		Chd.Root	= &Linear;
-	//		Chd.Parent	= &Linear;
-	//	}
-	//	int LinearOffset = 0;
-	//	Linear.linearize(LinearOffset, *this);
-	//	return Linear;
-	//}
+	math::mat4<float> model::node::global_transform(double aTime) {
+		// This calculates the global transform of the node which it is
+		// being called from. If there are no animations associated with 
+		// the node hierarchy, the bind pose transformations will be used
+		// instead. If there are animations associated with the node hierarchy,
+		// Then the animation transformations will be used in a weighted average.
 
-	math::mat4<float> model::node::global_transform(double aTime) const {
-		math::mat4<float> NodeTransform;
-		if (this->Animation != nullptr) {
-			// TODO: Support Node Animation blending.
-			// Animation Detected, use Node Animation Override.
-			
+
+		//tex:
+		// It is the reponsibility of the model class to insure that the sum of the contribution
+		// factors (weights) is equal to 1.
+		// $$ 1 = w^{b} + \sum_{\forall A \in Anim} w_{i} $$
+		// $$ T = T^{base} \cdot w^{base} + \sum_{\forall i \in A} T_{i}^{A} \cdot w_{i}^{A} $$ 
+		//
+
+		math::mat4<float> NodeTransform = this->Transformation * this->Weight;
+		// Checks if there are animations at the Root Node.
+		if (this->Root->Animation.size() > 0) {
+			// If there are, iterate through them, get their transforms and
+			// their contribution factors (weights).
+			for (animation& Anim : this->Root->Animation) {
+				// NodeTransform += AnimationTransform * Contribution Factor
+				NodeTransform += Anim[this->Name][aTime]*Anim.Weight;
+			}
 		}
-		else {
-			NodeTransform = this->Transformation;
-		}
+
+		// Recursively apply parent transformations.
 		if (this->Parent != nullptr) {
-			return this->Parent->global_transform(0.0f) * NodeTransform;
+			return this->Parent->global_transform(aTime) * NodeTransform;
 		}
 		else {
 			return NodeTransform;
 		}
 	}
-
-	//void model::node::linearize(int& aOffset, const node& aNode) {
-	//	//this->Child[aOffset].MeshIndex 			= aNode.MeshIndex;
-	//	this->Child[aOffset].Name				= aNode.Name;
-	//	this->Child[aOffset].Transformation		= aNode.global_transform();
-	//	aOffset += 1;
-	//	for (const node& Chd : aNode.Child) {
-	//		this->linearize(aOffset, Chd);
-	//	}
-	//}
 
 	void model::node::set_root(node* aRoot) {
 		this->Root = aRoot;
@@ -254,16 +306,18 @@ namespace geodesuka::core::graphics {
 		this->Root				= this;
 		this->Parent			= nullptr;
 		this->Name				= "";
+		this->Weight 			= 1.0f;
 		this->Transformation 	= math::mat4<float>(
 			1.0f, 	0.0f, 	0.0f, 	0.0f,
 			0.0f,	1.0f, 	0.0f, 	0.0f,
 			0.0f,	0.0f, 	1.0f, 	0.0f,
 			0.0f,	0.0f, 	0.0f, 	1.0f
 		);
-		this->Animation 		= nullptr;
 	}
 
-	model::model() {}
+	model::model() {
+
+	}
 
 	model::model(const char* aFilePath) {
 		if (aFilePath == NULL) return;
@@ -288,17 +342,64 @@ namespace geodesuka::core::graphics {
 		// Extract Scene Hiearchy
 		fill_and_traverse(Scene, this->Hierarchy, Scene->mRootNode);
 
-		// Linearize Node Hierarchy
-		// this->LeafList = this->Hierarchy.linearize();
-		// for (const node& Chd : this->LeafList.Child) {
-		// 	std::cout << Chd.Name << std::endl;
-		// }
-		
-		this->Mesh			= std::vector<mesh>(Scene->mNumMeshes);
-		this->Material		= std::vector<material>(Scene->mNumMaterials);
-		this->Animation		= std::vector<animation>(Scene->mNumAnimations);
-		this->Texture		= std::vector<gcl::image>(Scene->mNumTextures);
+		// Extract Scene Animations. Animations will be tied to the node structure
+		// since animation info is what animates the node structure. The reason why
+		// elements are extracted as stack variables is simply for readability.
+		this->Hierarchy.Animation = std::vector<animation>(Scene->mNumAnimations);
+		for (size_t i = 0; i < this->Hierarchy.Animation.size(); i++) {
+			aiAnimation* RA 	= Scene->mAnimations[i];
+			animation& LA 		= this->Hierarchy.Animation[i];
+			LA.Name					= RA->mName.C_Str();
+			LA.Weight				= 0.0f; // Animation Disabled until specified otherwise.
+			LA.Duration				= RA->mDuration;
+			LA.TicksPerSecond		= RA->mTicksPerSecond;
+			// Extract Node Animation Animation Structure.
+			for (uint j = 0; j < RA->mNumChannels; j++) {
+				// Get Node Animation Data Structure
+				aiNodeAnim* RNA 										= RA->mChannels[j];
+				std::string NodeName 									= RNA->mNodeName.C_Str();
+				this->Hierarchy.Animation[i].NodeAnimMap[NodeName] 		= animation::node_anim();
+				animation::node_anim& LNA 								= this->Hierarchy.Animation[i].NodeAnimMap[NodeName];
 
+				// Initialize Vectors For Key Data
+				LNA.PositionKey = std::vector<animation::key<math::vec3<float>>>(RNA->mNumPositionKeys);	
+				LNA.RotationKey = std::vector<animation::key<math::quaternion<float>>>(RNA->mNumRotationKeys);
+				LNA.ScalingKey = std::vector<animation::key<math::vec3<float>>>(RNA->mNumScalingKeys);
+
+				// Get Position Keys
+				for (uint k = 0; k < RNA->mNumPositionKeys; k++) {
+					LNA.PositionKey[k].Time = RNA->mPositionKeys[k].mTime;
+					LNA.PositionKey[k].Value = math::vec3<float>(
+						RNA->mPositionKeys[k].mValue.x,
+						RNA->mPositionKeys[k].mValue.y,
+						RNA->mPositionKeys[k].mValue.z
+					);
+				}
+
+				// Get Rotation Keys
+				for (uint k = 0; k < RNA->mNumRotationKeys; k++) {
+					LNA.RotationKey[k].Time = RNA->mRotationKeys[k].mTime;
+					LNA.RotationKey[k].Value = math::quaternion<float>(
+						RNA->mRotationKeys[k].mValue.w,
+						RNA->mRotationKeys[k].mValue.x,
+						RNA->mRotationKeys[k].mValue.y,
+						RNA->mRotationKeys[k].mValue.z
+					);
+				}
+
+				// Finally Get Scaling Keys
+				for (uint k = 0; k < RNA->mNumScalingKeys; k++) {
+					LNA.ScalingKey[k].Time = RNA->mScalingKeys[k].mTime;
+					LNA.ScalingKey[k].Value = math::vec3<float>(
+						RNA->mScalingKeys[k].mValue.x,
+						RNA->mScalingKeys[k].mValue.y,
+						RNA->mScalingKeys[k].mValue.z
+					);
+				}
+			}
+		}
+
+		this->Mesh			= std::vector<mesh>(Scene->mNumMeshes);
 		for (size_t i = 0; i < this->Mesh.size(); i++) {
 			// Load Raw Vertex Data (Gross, optimize later)
 			std::vector<mesh::vertex> VertexData(Scene->mMeshes[i]->mNumVertices);
@@ -383,64 +484,32 @@ namespace geodesuka::core::graphics {
 				}
 			}
 
-			// Load Bone Data
-			// std::vector<mesh::bone> BoneData(Scene->mMeshes[i]->mNumBones);
-			// for (size_t j = 0; j < BoneData.size(); j++) {
-			// 	aiBone* Bone			= Scene->mMeshes[i]->mBones[j];
-			// 	BoneData[j].Name		= Bone->mName.C_Str();
-			// 	BoneData[j].Vertex		= std::vector<mesh::vertex::weight>(Bone->mNumWeights);
-			// 	for (size_t k = 0; k < BoneData[j].Vertex.size(); k++) {
-			// 		BoneData[j].Vertex[k].ID 		= Bone->mWeights[k].mVertexId;
-			// 		BoneData[j].Vertex[k].Weight 	= Bone->mWeights[k].mWeight;
-			// 	}
-			// 	BoneData[j].Offset = math::mat4<float>(
-			// 		Bone->mOffsetMatrix.a1, Bone->mOffsetMatrix.a2, Bone->mOffsetMatrix.a3, Bone->mOffsetMatrix.a4,
-			// 		Bone->mOffsetMatrix.b1, Bone->mOffsetMatrix.b2, Bone->mOffsetMatrix.b3, Bone->mOffsetMatrix.b4,
-			// 		Bone->mOffsetMatrix.c1, Bone->mOffsetMatrix.c2, Bone->mOffsetMatrix.c3, Bone->mOffsetMatrix.c4,
-			// 		Bone->mOffsetMatrix.d1, Bone->mOffsetMatrix.d2, Bone->mOffsetMatrix.d3, Bone->mOffsetMatrix.d4
-			// 	);
-			// }
-
-			// for (size_t j = 0; j < BoneData.size(); j++) {
-			// 	for (size_t k = 0; k < BoneData[j].Vertex.size(); k++) {
-			// 	size_t Offset = 0;
-			// 		size_t VI 						= BoneData[j].Vertex[k].ID;
-			// 		VertexData[VI].BoneID[0] 		= j;
-			// 		VertexData[VI].BoneWeight[0] 	= BoneData[j].Vertex[k].Weight;
-			// 	}
-			// }
-
-			// for (mesh::vertex& Vertex : VertexData) {
-			// 	for (size_t j = 0; j < BoneData.size(); j++) {
-
-			// 	}
-			// }
-
-			// // Add bone data to VertexBuffer.
-			// for (mesh::bone Bone : BoneData) {
-			// 	for (mesh::bone::vertex_weight Vertex : Bone.Vertex) {
-			// 		size_t j = 0;
-			// 		if (VertexData[Vertex.ID].BoneID[j] == UINT32_MAX) {
-
-			// 		}
-			// 		VertexData[Vertex.ID].BoneID[0] 		= 0; // TODO: Determine how this will map to bone buffer.
-			// 		VertexData[Vertex.ID].BoneWeight[0] 	= Vertex.Weight;
-			// 	}
-			// }
-
 			// Create Mesh Object
 			this->Mesh[i] = mesh(nullptr, VertexData, IndexData);
 			this->Mesh[i].Name = Scene->mMeshes[i]->mName.C_Str();
 			this->Mesh[i].MaterialIndex = Scene->mMeshes[i]->mMaterialIndex;
 		}
 
+
 		// I have no fucking clue how to handle materials.
+		this->Material = std::vector<material>(Scene->mNumMaterials);
 		for (size_t i = 0; i < Scene->mNumMaterials; i++) {
 			aiMaterial *Mat = Scene->mMaterials[i];
-			for (size_t j = 0; j < Mat->mNumProperties; j++) {
-				
-			}
+			//for (size_t j = 0; j < Mat->mNumProperties; j++) {
+			//	aiMaterialProperty* Prop = Mat->mProperties[j];
+			//	if (Prop->mKey == AI_MATKEY_NAME) {
+
+			//	}
+			//	std::cout << "mKey = " << Prop->mKey.C_Str() << ",\t";
+			//	std::cout << "mSemantic = " << Prop->mSemantic << ",\t";
+			//	std::cout << "mIndex = " << Prop->mIndex << ",\t";
+			//	std::cout << "mDataLength = " << Prop->mDataLength << ",\t";
+			//	std::cout << "mType = " << Prop->mType << std::endl;
+			//}
 		}
+
+
+		this->Texture = std::vector<gcl::image>(Scene->mNumTextures);
 
 		ModelImporter->FreeScene();
 	}
@@ -461,7 +530,6 @@ namespace geodesuka::core::graphics {
 	void model::update(double aDeltaTime) {
 		Time += aDeltaTime;
 		// Choose animation here.
-		this->Hierarchy.play(nullptr);
 		this->Hierarchy.update(aDeltaTime);
 	}
 

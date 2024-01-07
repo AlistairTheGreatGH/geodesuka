@@ -25,7 +25,9 @@ namespace geodesuka::core::graphics {
 		struct node_anim {
 			std::vector<key<math::vec3<float>>> 			PositionKey;
 			std::vector<key<math::quaternion<float>>> 		RotationKey;
-			std::vector<key<math::quaternion<float>>> 		ScalingKey;
+			std::vector<key<math::vec3<float>>> 			ScalingKey;
+			node_anim();
+			math::mat4<float> operator[](double aTime) const;
 		};
 
 		struct mesh_anim {
@@ -33,14 +35,15 @@ namespace geodesuka::core::graphics {
 		};
 
 		std::string 						Name;
-		double 								Duration;
-		double 								TicksPerSecond;
+		float 								Weight;
+		float 								Duration;
+		float 								TicksPerSecond;
 		std::map<std::string, node_anim> 	NodeAnimMap;
 		std::map<std::string, mesh_anim> 	MeshAnimMap;
 
 		animation();
 
-		math::mat4<float> operator[](double aT) const;
+		node_anim operator[](std::string aNodeName);
 
 	private:
 

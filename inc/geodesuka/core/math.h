@@ -33,4 +33,7 @@
 #include "math/field3d.h"
 #include "math/field4d.h"
 
+// Utility Functions
+#include "math/func.h"
+
 #endif // !GEODESUKA_CORE_MATH_H

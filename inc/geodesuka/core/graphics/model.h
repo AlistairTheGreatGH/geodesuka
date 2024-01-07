@@ -23,7 +23,6 @@ namespace geodesuka::core::graphics {
 		friend class geodesuka::engine;
 
 		struct node {
-			
 
 			// Traversal Data
 			node*								Root;
@@ -31,37 +30,34 @@ namespace geodesuka::core::graphics {
 			std::vector<node>					Child;
 
 			// Metadata
-			std::string							Name;
-			math::mat4<float>					Transformation;
-			std::vector<mesh::instance> 		MeshInstance;
-			const animation* 					Animation;
+			std::string							Name;				// Name of the Node in Hierarchy
+			float 								Weight;				// Default Weight of the Node is 1.0f. 
+			math::mat4<float>					Transformation;		// Static Bone to Model Space Transform Component = T0*T1*T2*...*Tn*Vbs
+			std::vector<animation> 				Animation; 			// Overrides 
+			std::vector<mesh::instance> 		MeshInstance; 		//
 
 			node();
 			node(const node& aInput);
 			node(node&& aInput) noexcept;
 			~node();
 
-			node& operator[](int aIndex);
 			node& operator=(const node& aRhs);
 			node& operator=(node&& aRhs) noexcept;
 
-			// Choose Animation Set to Animate Node Hierarchy with.
-			void play(const animation* aAnimation);
+			node& operator[](int aIndex);
+			node& operator[](const char* aName);
+
 			// Update the node hierarchy. (Applies Node & Mesh Animations)
 			void update(double aTime);	
 			// Total Number of Nodes from this point on.
 			size_t node_count() const;
 			// Counts the total number of mesh references in the tree.
 			size_t instance_count() const;
-			// For this node, it will calculate the world transform for the node.
-			math::mat4<float> global_transform(double aTime) const;
+			// For this node, it will calculate the model transform for a node at a particular time.
+			// It uses the node's animation data to calculate the transform.
+			math::mat4<float> global_transform(double aTime);
 
 		private:
-
-			// Turns entire node tree into linearized array with multiplied transforms.
-			// node linearize() const;
-
-			//void linearize(int& aOffset, const node& aNode);
 
 			void set_root(node* aRoot);
 
@@ -84,7 +80,6 @@ namespace geodesuka::core::graphics {
 		gcl::context*						Context;
 		std::vector<mesh> 					Mesh;
 		std::vector<material> 				Material;
-		std::vector<animation> 				Animation;
 		std::vector<gcl::image> 			Texture;
 		// std::vector<object::light*> 		Light;				// Not Relevant To Model, open as stage.
 		// std::vector<object::camera*> 		Camera;			// Not Relevant To Model, open as stage.

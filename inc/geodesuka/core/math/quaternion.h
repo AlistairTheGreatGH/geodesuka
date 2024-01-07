@@ -6,28 +6,62 @@
 #include "type.h"
 #include "complex.h"
 
+
 //tex:
 // A quaternion<T> can be writtin in the mathematical form.
 // $$ q = a + b\hat{i} + c \hat{j} + d \hat{k} = a + \vec{v} $$
-// A quaternion<T> exponential can be written as
-// $$ e^{q} = e^{a} ( \cos{v} + \hat{v} \cos{v} )$$
-// A unit quaternion<T> in the service of rotating a vector $\vec{r}$
-// only needs to be defined in terms of another vector which it rotates
-// around, and a quantity of of how much it rotates around.
+
+
 
 //tex:
-// The magnitude of the quaternion<T> specifies the amount of rotation,
-// while the unit vector specifies which vector is it to be rotated around.
-// $$ \vec{r}^{'} = e^{\frac{\theta}{2} \hat{v}} \; \vec{r} \; e^{-\frac{\theta}{2}\hat{v}}$$
+// ----- Exponentiation of Quaternions -----
+// $$ e^{q} = e^{a} ( \cos{v} + \hat{v} \sin{v} ) $$
+// Where:
+// $$ v = \text{Magnitude of} \: \; \vec{v} \quad $$
+// and,
+// $$ \hat{v} = \frac{\vec{v}}{v} $$
+// ----- Exponentiation of Quaternions -----
+//
+
+
+
+//tex:
+// ----- Rotation of Quaternions -----
+// $$ r^{\prime} = q r q^{-1} $$
+// Where $ r $ is defined to be some arbitrary vector to be
+// rotated in 3D space. The quaternion $ q $ contains the
+// information of what vector $ r $ is to be rotated around.
+// The quaternion $ q $ containing the direction vector info
+// can be rewritten in its exponential form:
+// $$ q = e^{a + \vec{v}} $$
+// Its inverse is just simply
+// $$ q^{-1} = e^{- a - \vec{v}} $$
+// When substituting that in the rotation equation,
+// $$ r^{\prime} = (e^{a + \vec{v}}) \cdot r \cdot (e^{- a - \vec{v}}) $$
+// since $ e^{a} $ is simply just a scalar value, this commute with our
+// quaternions and thus,
+// $$ r^{\prime} = (e^{\vec{v}}) \cdot r \cdot (e^{-\vec{v}}) $$
+// But since our element $ e^{\vec{v}} $ is simply just,
+// $$ e^{\vec{v}} = ( \cos{v} + \hat{v} \sin{v} ) $$
+// This tells us that the magnitude of $ \vec{v} $ ($v$), is the degree which
+// the vector $ r $ is rotated while the unit vector $ \hat{v} = \frac{\vec{v}}{v} $
+// is just simply the base unit vector in which $ r $ is rotated around.
+// However, when we are saying that $ v $ designates by "how much" we want
+// rotate the vector $ r $ around $ \vec{v} $, we want to know how many radians.
+// We know that when the magnitude is zero, there is no rotation at all. For
+// reasons I do not currently know, the magnitude corresponds to a rotation
+// by the following ammount.
+// $$ v = \frac{\theta \; [\text{radians}]}{2} $$
+// Therefore the only information needed to calculate an arbitrary rotation, is 
+// a vector $ \hat{v} $ to rotate around, and how many degrees $d$ one wishes to 
+// rotate by. 
+// $$ \vec{r}^{\prime} = e^{\frac{\theta}{2}\hat{v}} \; \vec{r} \; e^{-\frac{\theta}{2}\hat{v}} $$
+// ----- Rotation of Quaternions -----
 
 namespace geodesuka::core::math {
 
 	template <typename T>
 	union quaternion {
-		// Unit Versors
-		// static const quaternion i;
-		// static const quaternion j;
-		// static const quaternion k;
 
 		struct {
 			T b, c, d, a;
@@ -86,10 +120,6 @@ namespace geodesuka::core::math {
 		quaternion<T>& operator/=(T aRhs);
 
 	};
-
-	// const quaternion<T> quaternion<T>::i = quaternion<T>(0, 1, 0, 0);
-	// const quaternion<T> quaternion<T>::j = quaternion<T>(0, 0, 1, 0);
-	// const quaternion<T> quaternion<T>::k = quaternion<T>(0, 0, 0, 1);
 
 	template <typename T> 
 	inline quaternion<T>::quaternion() {
