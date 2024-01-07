@@ -87,61 +87,6 @@ namespace geodesuka::core::object {
 	// system/virtual window must define attachment descriptions
 	VkResult window::create_renderer() {
 		VkResult Result = VK_SUCCESS;
-		VkAttachmentReference ColorAttachmentReference{};
-		VkSubpassDescription SubpassDescription{};
-		VkSubpassDependency SubpassDependency{};
-		VkRenderPassCreateInfo RPCI{};
-
-		// 1. Create Render Pass
-		ColorAttachmentReference.attachment				= 0;
-		ColorAttachmentReference.layout					= (VkImageLayout)gcl::image::layout::COLOR_ATTACHMENT_OPTIMAL;
-
-		SubpassDescription.flags						= 0;
-		SubpassDescription.pipelineBindPoint			= VK_PIPELINE_BIND_POINT_GRAPHICS;
-		SubpassDescription.inputAttachmentCount			= 0;
-		SubpassDescription.pInputAttachments			= NULL;
-		SubpassDescription.colorAttachmentCount			= 1;
-		SubpassDescription.pColorAttachments			= &ColorAttachmentReference;
-		SubpassDescription.pResolveAttachments			= NULL;
-		SubpassDescription.pDepthStencilAttachment		= NULL;
-		SubpassDescription.preserveAttachmentCount		= 0;
-		SubpassDescription.pPreserveAttachments			= NULL;
-
-		SubpassDependency.srcSubpass					= VK_SUBPASS_EXTERNAL;
-		SubpassDependency.dstSubpass					= 0;
-		SubpassDependency.srcStageMask					= gcl::pipeline::stage::TOP_OF_PIPE;
-		SubpassDependency.dstStageMask					= gcl::pipeline::stage::BOTTOM_OF_PIPE;
-		SubpassDependency.srcAccessMask					= gcl::device::access::MEMORY_WRITE;
-		SubpassDependency.dstAccessMask					= gcl::device::access::MEMORY_READ;
-		SubpassDependency.dependencyFlags				= 0;
-
-		RPCI.sType										= VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		RPCI.pNext										= NULL;
-		RPCI.flags										= 0;
-		RPCI.attachmentCount							= AttachmentDescription.size();
-		RPCI.pAttachments								= AttachmentDescription.data();
-		RPCI.subpassCount								= 1;
-		RPCI.pSubpasses									= &SubpassDescription;
-		RPCI.dependencyCount							= 1;
-		RPCI.pDependencies								= &SubpassDependency;
-
-		Result = vkCreateRenderPass(Context->handle(), &RPCI, NULL, &RenderPass);
-
-		// 2. Create Framebuffers
-		for (render_target::frame& Frm : Frame) {
-			VkFramebufferCreateInfo FCI{};
-			FCI.sType				= VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			FCI.pNext				= NULL;
-			FCI.flags				= 0;
-			FCI.renderPass			= RenderPass;
-			FCI.attachmentCount		= Frm.Attachment.size();
-			FCI.pAttachments		= Frm.Attachment.data(); 
-			FCI.width				= FrameResolution.x;
-			FCI.height				= FrameResolution.y;
-			FCI.layers				= 1;
-			Result = vkCreateFramebuffer(Context->handle(), &FCI, NULL, &Frm.Buffer);
-		}
-
 		return Result;
 	}
 

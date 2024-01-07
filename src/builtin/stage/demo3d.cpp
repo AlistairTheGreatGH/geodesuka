@@ -2,8 +2,6 @@
 
 #include <geodesuka/engine.h>
 
-using namespace geodesuka::core::object;
-
 namespace geodesuka::builtin::stage {
 
 	demo3d::demo3d(core::gcl::context* aContext) : scene3d(aContext) {
@@ -13,12 +11,6 @@ namespace geodesuka::builtin::stage {
 
 	demo3d::~demo3d() {
 
-	}
-
-	render_target::render_info demo3d::render() {
-		render_target::render_info RenderInfo{};
-
-		return RenderInfo;
 	}
 
 }

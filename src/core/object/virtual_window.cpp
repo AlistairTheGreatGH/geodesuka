@@ -23,8 +23,6 @@ namespace geodesuka::core::object {
 			Frm.Image[0].transition(gcl::image::LAYOUT_UNDEFINED, gcl::image::layout::SHADER_READ_ONLY_OPTIMAL);
 		}
 
-		AttachmentDescription[0] = Frame[0].Image[0].desc(gcl::image::layout::SHADER_READ_ONLY_OPTIMAL, gcl::image::layout::SHADER_READ_ONLY_OPTIMAL);
-
 		// Create Renderer
 		this->create_renderer();
 

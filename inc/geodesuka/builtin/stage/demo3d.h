@@ -14,10 +14,6 @@ namespace geodesuka::builtin::stage {
 
 		demo3d(core::gcl::context* aContext);
 		~demo3d();
-		
-	protected:
-
-		virtual core::object::render_target::render_info render() override;
 
 	private:
 

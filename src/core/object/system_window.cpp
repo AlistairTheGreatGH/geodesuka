@@ -119,41 +119,8 @@ namespace geodesuka::core::object {
 			}
 		}
 
-		// Setup attachment descriptions
-		AttachmentDescription[0] = Frame[0].Image[0].desc(image::layout::PRESENT_SRC_KHR, image::layout::PRESENT_SRC_KHR);
-
 		//// 5. Create Renderer
 		//this->create_renderer();
-
-		//// 6. 
-		//for (render_target::frame& Frm : Frame) {
-		//	VkClearColorValue ClearColorValue = { 0.0f, 0.0f, 0.0f, 0.0f };
-		//	VkImageSubresourceRange Range;
-		//	Range.aspectMask			= image::aspect_flag(Frm.Image[0].CreateInfo.format);
-		//	Range.baseMipLevel			= 0;
-		//	Range.levelCount			= Frm.Image[0].CreateInfo.mipLevels;
-		//	Range.baseArrayLayer		= 0;
-		//	Range.layerCount			= Frm.Image[0].CreateInfo.arrayLayers;
-		//	Frm.ClearScreen = CommandPool->allocate();
-		//	Result = Context->begin(Frm.ClearScreen);
-		//	vkCmdClearColorImage(
-		//		Frm.ClearScreen,
-		//		Frm.Image[0].Handle,
-		//		(VkImageLayout)image::layout::PRESENT_SRC_KHR,
-		//		&ClearColorValue,
-		//		1,
-		//		&Range
-		//	);
-		//	vkCmdPipelineBarrier(
-		//		Frm.ClearScreen,
-		//		pipeline::stage::TOP_OF_PIPE, pipeline::stage::FRAGMENT_SHADER,
-		//		0,
-		//		0, NULL,
-		//		0, NULL,
-		//		0, NULL
-		//	);
-		//	Result = Context->end(Frm.ClearScreen);
-		//}
 		
 	}
 

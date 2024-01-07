@@ -104,9 +104,9 @@ namespace geodesuka::core::object {
 		this->MaxDistance 	= 1000.0f;
 		this->Theta 		= math::constant::pi;
 		this->Phi 			= 0.0f;
-		this->DirectionX 	= math::vec3<float>(sin(Phi), -cos(Phi), 0.0f);
-		this->DirectionY 	= math::vec3<float>(-cos(Phi) * cos(Theta), -sin(Phi) * cos(Theta), sin(Theta));
-		this->DirectionZ 	= math::vec3<float>(cos(Phi) * sin(Theta), sin(Phi) * sin(Theta), cos(Theta));
+		this->DirectionX 	= math::vec3<float>( sin(Phi), 						-cos(Phi), 						0.0f);
+		this->DirectionY 	= math::vec3<float>(-cos(Phi) * cos(Theta), 		-sin(Phi) * cos(Theta), 		sin(Theta));
+		this->DirectionZ 	= math::vec3<float>( cos(Phi) * sin(Theta), 		 sin(Phi) * sin(Theta), 		cos(Theta));
 
 		this->Projection = perspective(this->FieldOfView, this->AspectRatio, this->MinDistance, this->MaxDistance);
 
@@ -158,16 +158,13 @@ namespace geodesuka::core::object {
 
 		// Fill out uniform buffer.
 
-		this->create_images();
-
-		this->create_render_pass();
-
-		this->create_framebuffers();
-
-		this->create_pipelines();
-
 		
 
+	}
+
+	std::vector<VkSubmitInfo> camera3d::render(stage::scene3d* aStage) {
+		std::vector<VkSubmitInfo> SubmitInfo;
+		return SubmitInfo;
 	}
 
 	void camera3d::update(double aDeltaTime) {
@@ -300,59 +297,59 @@ namespace geodesuka::core::object {
 		return VK_SUCCESS;
 	}
 
-	VkResult camera3d::create_render_pass() {
-		VkSubpassDescription Subpass;
-		VkSubpassDependency Dependency;
-		VkAttachmentReference ColorAttachment[4];
-		VkAttachmentReference DepthAttachment;
-		VkRenderPassCreateInfo RenderPassCreateInfo{};
+	//VkResult camera3d::create_render_pass() {
+	//	VkSubpassDescription Subpass;
+	//	VkSubpassDependency Dependency;
+	//	VkAttachmentReference ColorAttachment[4];
+	//	VkAttachmentReference DepthAttachment;
+	//	VkRenderPassCreateInfo RenderPassCreateInfo{};
 
-		DepthAttachment.attachment				= 0;
-		DepthAttachment.layout					= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+	//	DepthAttachment.attachment				= 0;
+	//	DepthAttachment.layout					= VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
-		ColorAttachment[0].attachment			= 1;
-		ColorAttachment[0].layout				= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	//	ColorAttachment[0].attachment			= 1;
+	//	ColorAttachment[0].layout				= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-		ColorAttachment[1].attachment			= 2;
-		ColorAttachment[1].layout				= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	//	ColorAttachment[1].attachment			= 2;
+	//	ColorAttachment[1].layout				= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-		ColorAttachment[2].attachment			= 3;
-		ColorAttachment[2].layout				= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	//	ColorAttachment[2].attachment			= 3;
+	//	ColorAttachment[2].layout				= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-		ColorAttachment[3].attachment			= 4;
-		ColorAttachment[3].layout				= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	//	ColorAttachment[3].attachment			= 4;
+	//	ColorAttachment[3].layout				= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-		Subpass.flags							= 0;
-		Subpass.pipelineBindPoint				= VK_PIPELINE_BIND_POINT_GRAPHICS;
-		Subpass.inputAttachmentCount			= 0;
-		Subpass.pInputAttachments				= NULL;
-		Subpass.colorAttachmentCount			= 4;
-		Subpass.pColorAttachments				= ColorAttachment;
-		Subpass.pResolveAttachments				= NULL;
-		Subpass.pDepthStencilAttachment			= &DepthAttachment;
-		Subpass.preserveAttachmentCount			= 0;
-		Subpass.pPreserveAttachments			= NULL;
+	//	Subpass.flags							= 0;
+	//	Subpass.pipelineBindPoint				= VK_PIPELINE_BIND_POINT_GRAPHICS;
+	//	Subpass.inputAttachmentCount			= 0;
+	//	Subpass.pInputAttachments				= NULL;
+	//	Subpass.colorAttachmentCount			= 4;
+	//	Subpass.pColorAttachments				= ColorAttachment;
+	//	Subpass.pResolveAttachments				= NULL;
+	//	Subpass.pDepthStencilAttachment			= &DepthAttachment;
+	//	Subpass.preserveAttachmentCount			= 0;
+	//	Subpass.pPreserveAttachments			= NULL;
 
-		Dependency.srcSubpass					= VK_SUBPASS_EXTERNAL;
-		Dependency.dstSubpass					= 0;
-		Dependency.srcStageMask					= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		Dependency.dstStageMask					= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-		Dependency.srcAccessMask				= VK_ACCESS_MEMORY_WRITE_BIT;
-		Dependency.dstAccessMask				= VK_ACCESS_MEMORY_READ_BIT;
-		Dependency.dependencyFlags				= 0;
+	//	Dependency.srcSubpass					= VK_SUBPASS_EXTERNAL;
+	//	Dependency.dstSubpass					= 0;
+	//	Dependency.srcStageMask					= VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+	//	Dependency.dstStageMask					= VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+	//	Dependency.srcAccessMask				= VK_ACCESS_MEMORY_WRITE_BIT;
+	//	Dependency.dstAccessMask				= VK_ACCESS_MEMORY_READ_BIT;
+	//	Dependency.dependencyFlags				= 0;
 
-		RenderPassCreateInfo.sType				= VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		RenderPassCreateInfo.pNext				= NULL;
-		RenderPassCreateInfo.flags				= 0;
-		RenderPassCreateInfo.attachmentCount	= this->AttachmentDescription.size();
-		RenderPassCreateInfo.pAttachments		= this->AttachmentDescription.data();
-		RenderPassCreateInfo.subpassCount		= 1;
-		RenderPassCreateInfo.pSubpasses			= &Subpass;
-		RenderPassCreateInfo.dependencyCount	= 1;
-		RenderPassCreateInfo.pDependencies		= &Dependency;
+	//	RenderPassCreateInfo.sType				= VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+	//	RenderPassCreateInfo.pNext				= NULL;
+	//	RenderPassCreateInfo.flags				= 0;
+	//	RenderPassCreateInfo.attachmentCount	= this->AttachmentDescription.size();
+	//	RenderPassCreateInfo.pAttachments		= this->AttachmentDescription.data();
+	//	RenderPassCreateInfo.subpassCount		= 1;
+	//	RenderPassCreateInfo.pSubpasses			= &Subpass;
+	//	RenderPassCreateInfo.dependencyCount	= 1;
+	//	RenderPassCreateInfo.pDependencies		= &Dependency;
 
-		return vkCreateRenderPass(Context->handle(), &RenderPassCreateInfo, NULL, &RenderPass);
-	}
+	//	return vkCreateRenderPass(Context->handle(), &RenderPassCreateInfo, NULL, &RenderPass);
+	//}
 
 	VkResult camera3d::create_pipelines() {
 		VkResult Result = VK_SUCCESS;

@@ -40,30 +40,30 @@ namespace geodesuka::core {
 	object_t::default_renderer::default_renderer(gcl::context* aContext, object::camera3d* aCamera3D, object_t* aObject) {
 		VkResult Result = VK_SUCCESS;
 
-		this->Context 		= aContext;
+		this->Context = aContext;
 
-		// The number of descriptor sets needed must be determined by the render target.
-		std::vector<VkDescriptorPoolSize> DescriptorPoolSize = aCamera3D->descriptor_pool_sizes();
-		VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo{};
-		DescriptorPoolCreateInfo.sType				= VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		DescriptorPoolCreateInfo.pNext				= NULL;
-		DescriptorPoolCreateInfo.flags				= 0;
-		DescriptorPoolCreateInfo.maxSets			= aCamera3D->descriptor_set_count();
-		DescriptorPoolCreateInfo.poolSizeCount		= DescriptorPoolSize.size();
-		DescriptorPoolCreateInfo.pPoolSizes			= DescriptorPoolSize.data();
-		
-		// ---------- Create Descriptor Sets ---------- //
+		//// The number of descriptor sets needed must be determined by the render target.
+		//std::vector<VkDescriptorPoolSize> DescriptorPoolSize = aCamera3D->descriptor_pool_sizes();
+		//VkDescriptorPoolCreateInfo DescriptorPoolCreateInfo{};
+		//DescriptorPoolCreateInfo.sType				= VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		//DescriptorPoolCreateInfo.pNext				= NULL;
+		//DescriptorPoolCreateInfo.flags				= 0;
+		//DescriptorPoolCreateInfo.maxSets			= aCamera3D->descriptor_set_count();
+		//DescriptorPoolCreateInfo.poolSizeCount		= DescriptorPoolSize.size();
+		//DescriptorPoolCreateInfo.pPoolSizes			= DescriptorPoolSize.data();
+		//
+		//// ---------- Create Descriptor Sets ---------- //
 
-		this->DescriptorSet.resize(aCamera3D->Frame.size());
-		for (size_t i = 0; i < aCamera3D->Frame.size(); i++) {
-			VkDescriptorSetAllocateInfo AllocateInfo{};
-			AllocateInfo.sType					= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-			AllocateInfo.pNext					= NULL;
-			AllocateInfo.descriptorPool			= this->DescriptorPool;
-			AllocateInfo.descriptorSetCount		;
-			AllocateInfo.pSetLayouts			;
-			Result = vkAllocateDescriptorSets(aContext->handle(), &AllocateInfo, this->DescriptorSet[i].data());
-		}
+		//this->DescriptorSet.resize(aCamera3D->Frame.size());
+		//for (size_t i = 0; i < aCamera3D->Frame.size(); i++) {
+		//	VkDescriptorSetAllocateInfo AllocateInfo{};
+		//	AllocateInfo.sType					= VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		//	AllocateInfo.pNext					= NULL;
+		//	AllocateInfo.descriptorPool			= this->DescriptorPool;
+		//	AllocateInfo.descriptorSetCount		;
+		//	AllocateInfo.pSetLayouts			;
+		//	Result = vkAllocateDescriptorSets(aContext->handle(), &AllocateInfo, this->DescriptorSet[i].data());
+		//}
 
 		// ---------- Command Buffers ---------- //
 
@@ -76,9 +76,9 @@ namespace geodesuka::core {
 			DrawCommand[i] = std::vector<VkCommandBuffer>(MeshInstance.size());
 			for (size_t j = 0; j < MeshInstance.size(); j++) {
 				// Get reference for readability.
-				graphics::mesh& Mesh 		= aObject->Model->Mesh[MeshInstance[j]->Index];
-				gcl::pipeline& Pipeline 	= aCamera3D->Pipeline[0];
-				std::vector<VkBuffer> VertexBuffer = {
+				graphics::mesh& Mesh 				= aObject->Model->Mesh[MeshInstance[j]->Index];
+				gcl::pipeline& Pipeline 			= aCamera3D->Pipeline[0];
+				std::vector<VkBuffer> VertexBuffer 	= {
 					// This contains the vertex data for the static mesh.
 					Mesh.VertexBuffer.handle(),
 					// This buffer contains the per-vertex weight data {BoneID, BoneWeight}.

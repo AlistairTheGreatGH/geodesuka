@@ -417,7 +417,7 @@ namespace geodesuka::core::gcl {
 	}
 
 	void variable::set_root(variable* aRoot) {
-		this->Root == aRoot;
+		this->Root = aRoot;
 		for (int i = 0; i < this->Type.MemberCount; i++) {
 			this->Type.Member[i].set_root(aRoot);
 		}

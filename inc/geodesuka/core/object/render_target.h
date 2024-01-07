@@ -51,8 +51,6 @@ namespace geodesuka::core::object {
 			std::vector<gcl::command_list>				RenderingInfo;
 			std::vector<gcl::image>						Image;
 			std::vector<VkImageView>					Attachment;
-			VkFramebuffer								Buffer;
-			VkCommandBuffer 							ClearScreen;
 			frame() {}
 			frame(int aAttachmentCount);
 		};
@@ -66,7 +64,7 @@ namespace geodesuka::core::object {
 		uint32_t									FrameReadIndex;
 		uint32_t									FrameDrawIndex;
 		std::vector<frame>							Frame;
-		std::vector<VkAttachmentDescription>		AttachmentDescription;
+		//std::vector<VkAttachmentDescription>		AttachmentDescription;
 
 		// ----- Render Target Renderer ----- //
 		// Render Target Defined Render Operations. (As opposed to object defined)
@@ -94,14 +92,10 @@ namespace geodesuka::core::object {
 
 		virtual VkResult next_frame();
 		virtual VkPresentInfoKHR present_frame();
-		uint32_t descriptor_set_count() const;
-		std::vector<VkDescriptorPoolSize> descriptor_pool_sizes() const;
 
 	protected:
 
 		render_target(gcl::context* aContext, stage_t* aStage, const char* aName, math::vec3<uint> aFrameResolution, double aFrameRate, uint32_t aFrameCount, uint32_t aAttachmentCount);
-
-		VkResult create_framebuffers();
 
 	};
 

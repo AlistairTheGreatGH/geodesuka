@@ -1,6 +1,9 @@
 #include <geodesuka/core/stage/scene3d.h>
 
+
 namespace geodesuka::core::stage {
+
+	using namespace object;
 
 	scene3d::scene3d(gcl::context* aContext) : stage_t(aContext->parent_engine(), aContext) {
 
@@ -14,9 +17,16 @@ namespace geodesuka::core::stage {
 		return ID;
 	}
 
-	//stage_t::batch scene3d::render() {
-	//	batch DrawBatch;
-	//	return DrawBatch;
-	//}
+	render_target::render_info scene3d::render() {
+		render_target::render_info RenderInfo{};
+		for (auto& Cam : this->Camera) {
+			if (Cam->FrameRateTimer.check_and_reset()) {
+				Cam->next_frame();
+
+				Cam->present_frame();
+			}
+		}
+		return RenderInfo;
+	}
 
 }

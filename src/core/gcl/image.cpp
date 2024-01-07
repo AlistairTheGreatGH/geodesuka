@@ -971,7 +971,7 @@ namespace geodesuka::core::gcl {
 		// without reallocation.
 
 		size_t StagingBufferSize = 0;
-		for (VkBufferImageCopy Region : aRegionList) {
+		for (const VkBufferImageCopy& Region : aRegionList) {
 			size_t RegionSize = Region.imageExtent.width * Region.imageExtent.height * Region.imageExtent.depth * Region.imageSubresource.layerCount * bytes_per_pixel(this->CreateInfo.format);
 			if (StagingBufferSize < RegionSize) {
 				StagingBufferSize = RegionSize;
@@ -985,7 +985,7 @@ namespace geodesuka::core::gcl {
 			StagingBufferSize
 		);
 
-		for (VkBufferImageCopy Region : aRegionList) {
+		for (const VkBufferImageCopy& Region : aRegionList) {
 			// Calculate Region Size
 			size_t RegionSize = Region.imageExtent.width * Region.imageExtent.height * Region.imageExtent.depth * Region.imageSubresource.layerCount * bytes_per_pixel(this->CreateInfo.format);
 			
@@ -1019,7 +1019,7 @@ namespace geodesuka::core::gcl {
 		VkResult Result = VK_SUCCESS;
 
 		size_t StagingBufferSize = 0;
-		for (VkBufferImageCopy Region : aRegionList) {
+		for (const VkBufferImageCopy& Region : aRegionList) {
 			size_t RegionSize = Region.imageExtent.width * Region.imageExtent.height * Region.imageExtent.depth * Region.imageSubresource.layerCount * bytes_per_pixel(this->CreateInfo.format);
 			if (StagingBufferSize < RegionSize) {
 				StagingBufferSize = RegionSize;
@@ -1033,7 +1033,7 @@ namespace geodesuka::core::gcl {
 			StagingBufferSize
 		);
 
-		for (VkBufferImageCopy Region : aRegionList) {
+		for (const VkBufferImageCopy& Region : aRegionList) {
 			// Calculate Region Size
 			size_t RegionSize = Region.imageExtent.width * Region.imageExtent.height * Region.imageExtent.depth * Region.imageSubresource.layerCount * bytes_per_pixel(this->CreateInfo.format);
 

@@ -10,15 +10,6 @@ namespace geodesuka::core::object {
 	class camera3d : public camera {
 	public:
 
-		/*
-		* The output of a pixel shader using this as a render target
-		* must use the following form.
-		* layout (location = 0) out vec4 PixelColor;
-		* layout (location = 1) out vec3 PixelPosition;
-		* layout (location = 2) out vec3 PixelNormal;
-		* layout (location = 3) out vec3 PixelSpecular;
-		*/
-
 		struct geometry_buffer {
 			gcl::image DepthBuffer;
 			gcl::image PixelColor;
@@ -46,6 +37,8 @@ namespace geodesuka::core::object {
 		camera3d(gcl::context* aContext, stage::scene3d* aScene3D, const char* aName, math::vec3<float> aPosition, math::vec2<int> aResolution, double aFrameRate, uint32_t aFrameCount);
 		//~camera3d();
 
+		std::vector<VkSubmitInfo> render(stage::scene3d* aStage);
+
 	protected:
 
 		// ----- object_t methods ----- //
@@ -57,14 +50,14 @@ namespace geodesuka::core::object {
 	private:
 
 		// Generates the Perspective Projection Matrix.
-		float					FieldOfView;
-		float					AspectRatio;
-		float					MinDistance;
-		float					MaxDistance;
+		float							FieldOfView;
+		float							AspectRatio;
+		float							MinDistance;
+		float							MaxDistance;
 
 		// Orientation Info.
-		float					Theta;
-		float					Phi;
+		float							Theta;
+		float							Phi;
 
 		// Camera Transform Info.
 		math::mat4<float>				PRT;
@@ -72,7 +65,7 @@ namespace geodesuka::core::object {
 		math::mat4<float>				Rotation;
 		math::mat4<float>				Translation;
 
-		gcl::buffer 			CameraUniformBuffer;
+		gcl::buffer 					Camera3DUniformBuffer;
 
 		// Subpass 0:
 
@@ -105,9 +98,6 @@ namespace geodesuka::core::object {
 		gcl::command_list *TranslucentObjectCommandList;
 
 		VkResult create_images();
-
-		// Describes render pass
-		VkResult create_render_pass();
 
 		VkResult create_pipelines();
 

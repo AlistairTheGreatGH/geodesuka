@@ -35,9 +35,7 @@ namespace geodesuka::core::stage {
 		std::vector<object::light*> 	Light;
 		std::vector<object::camera3d*> 	Camera;
 
-
-
-		//std::vector<object::camera3d*> Camera;
+		virtual core::object::render_target::render_info render() override;
 
 		scene3d(gcl::context* aContext);
 
