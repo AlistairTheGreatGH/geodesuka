@@ -76,7 +76,68 @@ file(READ ${CMAKE_SOURCE_DIR}/dep/freetype-build/include/freetype/config/ftoptio
 string(REGEX REPLACE "#define FT_CONFIG_OPTION_USE_ZLIB" "// #define FT_CONFIG_OPTION_USE_ZLIB" FreetypeConfig "${FreetypeConfig}")
 file(WRITE ${CMAKE_SOURCE_DIR}/dep/freetype-build/include/freetype/config/ftoption.h "${FreetypeConfig}")
 
+file(GLOB_RECURSE INC
+    "inc/*.h"
+)
+
+file(GLOB_RECURSE SRC
+    "src/*.h"
+    "src/*.cpp"
+    "src/*.c"
+)
+
+# ----------------------- Geodesuka Library ----------------------- #
+
 project(${GEODESUKA_LIBRARY})
+
+# Find and include OpenMP
+find_package(OpenMP REQUIRED)
+if(OpenMP_CXX_FOUND)
+    message("OpenMP found.")
+endif()
+
+# Find and include Vulkan
+find_package(Vulkan REQUIRED)
+if(Vulkan_FOUND)
+    message("Vulkan found.")
+    # Find the last occurrence of "/Include" in the path
+    string(FIND "${Vulkan_INCLUDE_DIRS}" "/Include" REMOVE_INDEX REVERSE)
+
+    if (REMOVE_INDEX GREATER -1)
+        # Remove the "/Include" part from the path
+        string(SUBSTRING "${Vulkan_INCLUDE_DIRS}" 0 ${REMOVE_INDEX} VULKAN_SDK_ROOT_DIR)
+    else ()
+        # If "/Include" is not found, keep the original path
+        set(VULKAN_SDK_ROOT_DIR "${Vulkan_INCLUDE_DIRS}")
+    endif ()
+
+    # Print the modified path
+    message(STATUS "Vulkan SDK Root Path: ${VULKAN_SDK_ROOT_DIR}")
+endif()
+
+# Link against Vulkan and OpenMP
+add_library(${GEODESUKA_LIBRARY} ${INC} ${SRC})
+
+set_target_properties(${GEODESUKA_LIBRARY} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/${CMAKE_SYSTEM_NAME}/)
+
+# Include directories
+target_include_directories(${GEODESUKA_LIBRARY} PRIVATE ${Vulkan_INCLUDE_DIRS}/)
+target_include_directories(${GEODESUKA_LIBRARY} PRIVATE ${CMAKE_SOURCE_DIR}/inc/)
+target_include_directories(${GEODESUKA_LIBRARY} PRIVATE ${CMAKE_SOURCE_DIR}/dep/glfw-build/src/)
+target_include_directories(${GEODESUKA_LIBRARY} PRIVATE ${CMAKE_SOURCE_DIR}/dep/sdl-build/include/)
+target_include_directories(${GEODESUKA_LIBRARY} PRIVATE ${CMAKE_SOURCE_DIR}/dep/assimp-build/include/)
+target_include_directories(${GEODESUKA_LIBRARY} PRIVATE ${CMAKE_SOURCE_DIR}/dep/freetype-build/include/)
+target_include_directories(${GEODESUKA_LIBRARY} PRIVATE ${CMAKE_SOURCE_DIR}/dep/glfw-src/include/)
+target_include_directories(${GEODESUKA_LIBRARY} PRIVATE ${CMAKE_SOURCE_DIR}/dep/sdl-src/include/)
+target_include_directories(${GEODESUKA_LIBRARY} PRIVATE ${CMAKE_SOURCE_DIR}/dep/stb-src/)
+target_include_directories(${GEODESUKA_LIBRARY} PRIVATE ${CMAKE_SOURCE_DIR}/dep/assimp-src/include/)
+target_include_directories(${GEODESUKA_LIBRARY} PRIVATE ${CMAKE_SOURCE_DIR}/dep/freetype-src/include/)
+
+# ----------------------- Geodesuka Unit Test ----------------------- #
+# When creating your own project off of the Geodesuka Library, use this
+# as a template for your own CMakeLists.txt file to know what to link against.
+
+project(${GEODESUKA_UNIT_TEST})
 
 # Find and include OpenMP
 find_package(OpenMP REQUIRED)
@@ -136,68 +197,58 @@ if(Vulkan_FOUND)
 
 endif()
 
-file(GLOB_RECURSE INC
-    "inc/*.h"
-)
-
-file(GLOB_RECURSE SRC
-    "src/*.h"
-    "src/*.cpp"
-    "src/*.c"
-)
-
 # Link against Vulkan and OpenMP
-add_executable(${GEODESUKA_LIBRARY} main.cpp ${INC} ${SRC})
+add_executable(${GEODESUKA_UNIT_TEST} main.cpp)
 
-#set_target_properties(${GEODESUKA_LIBRARY} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib/${CMAKE_SYSTEM_NAME}/)
-set_target_properties(${GEODESUKA_LIBRARY} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/${CMAKE_SYSTEM_NAME}/)
+set_target_properties(${GEODESUKA_UNIT_TEST} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin/${CMAKE_SYSTEM_NAME}/)
 
 # Include directories
-target_include_directories(${GEODESUKA_LIBRARY} PRIVATE ${Vulkan_INCLUDE_DIRS}/)
-target_include_directories(${GEODESUKA_LIBRARY} PRIVATE ${CMAKE_SOURCE_DIR}/inc/)
-target_include_directories(${GEODESUKA_LIBRARY} PRIVATE ${CMAKE_SOURCE_DIR}/dep/glfw-build/src/)
-target_include_directories(${GEODESUKA_LIBRARY} PRIVATE ${CMAKE_SOURCE_DIR}/dep/sdl-build/include/)
-target_include_directories(${GEODESUKA_LIBRARY} PRIVATE ${CMAKE_SOURCE_DIR}/dep/assimp-build/include/)
-target_include_directories(${GEODESUKA_LIBRARY} PRIVATE ${CMAKE_SOURCE_DIR}/dep/freetype-build/include/)
-target_include_directories(${GEODESUKA_LIBRARY} PRIVATE ${CMAKE_SOURCE_DIR}/dep/glfw-src/include/)
-target_include_directories(${GEODESUKA_LIBRARY} PRIVATE ${CMAKE_SOURCE_DIR}/dep/sdl-src/include/)
-target_include_directories(${GEODESUKA_LIBRARY} PRIVATE ${CMAKE_SOURCE_DIR}/dep/stb-src/)
-target_include_directories(${GEODESUKA_LIBRARY} PRIVATE ${CMAKE_SOURCE_DIR}/dep/assimp-src/include/)
-target_include_directories(${GEODESUKA_LIBRARY} PRIVATE ${CMAKE_SOURCE_DIR}/dep/freetype-src/include/)
+target_include_directories(${GEODESUKA_UNIT_TEST} PRIVATE ${Vulkan_INCLUDE_DIRS}/)
+target_include_directories(${GEODESUKA_UNIT_TEST} PRIVATE ${CMAKE_SOURCE_DIR}/inc/)
+target_include_directories(${GEODESUKA_UNIT_TEST} PRIVATE ${CMAKE_SOURCE_DIR}/dep/glfw-build/src/)
+target_include_directories(${GEODESUKA_UNIT_TEST} PRIVATE ${CMAKE_SOURCE_DIR}/dep/sdl-build/include/)
+target_include_directories(${GEODESUKA_UNIT_TEST} PRIVATE ${CMAKE_SOURCE_DIR}/dep/assimp-build/include/)
+target_include_directories(${GEODESUKA_UNIT_TEST} PRIVATE ${CMAKE_SOURCE_DIR}/dep/freetype-build/include/)
+target_include_directories(${GEODESUKA_UNIT_TEST} PRIVATE ${CMAKE_SOURCE_DIR}/dep/glfw-src/include/)
+target_include_directories(${GEODESUKA_UNIT_TEST} PRIVATE ${CMAKE_SOURCE_DIR}/dep/sdl-src/include/)
+target_include_directories(${GEODESUKA_UNIT_TEST} PRIVATE ${CMAKE_SOURCE_DIR}/dep/stb-src/)
+target_include_directories(${GEODESUKA_UNIT_TEST} PRIVATE ${CMAKE_SOURCE_DIR}/dep/assimp-src/include/)
+target_include_directories(${GEODESUKA_UNIT_TEST} PRIVATE ${CMAKE_SOURCE_DIR}/dep/freetype-src/include/)
 
 # Link Against Vulkan
-target_link_libraries(${GEODESUKA_LIBRARY} PRIVATE ${Vulkan_LIBRARY})
+target_link_libraries(${GEODESUKA_UNIT_TEST} PRIVATE ${Vulkan_LIBRARY})
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
-    target_link_libraries(${GEODESUKA_LIBRARY} PRIVATE ${VULKAN_SDK_ROOT_DIR}/Lib/volk.lib)
-    target_link_libraries(${GEODESUKA_LIBRARY} PRIVATE ${VULKAN_SDK_ROOT_DIR}/Lib/SDL2-static.lib)
-    target_link_libraries(${GEODESUKA_LIBRARY} PRIVATE ${VULKAN_SDK_ROOT_DIR}/Lib/SDL2.lib)
-    target_link_libraries(${GEODESUKA_LIBRARY} PRIVATE ${VULKAN_SDK_ROOT_DIR}/Lib/SDL2main.lib)
-    target_link_libraries(${GEODESUKA_LIBRARY} PRIVATE ${VULKAN_SDK_ROOT_DIR}/Lib/SDL2_test.lib)
-    target_link_libraries(${GEODESUKA_LIBRARY} PRIVATE ${VULKAN_SDK_ROOT_DIR}/Lib/dxcompiler.lib)
+    target_link_libraries(${GEODESUKA_UNIT_TEST} PRIVATE ${VULKAN_SDK_ROOT_DIR}/Lib/volk.lib)
+    target_link_libraries(${GEODESUKA_UNIT_TEST} PRIVATE ${VULKAN_SDK_ROOT_DIR}/Lib/SDL2-static.lib)
+    target_link_libraries(${GEODESUKA_UNIT_TEST} PRIVATE ${VULKAN_SDK_ROOT_DIR}/Lib/SDL2.lib)
+    target_link_libraries(${GEODESUKA_UNIT_TEST} PRIVATE ${VULKAN_SDK_ROOT_DIR}/Lib/SDL2main.lib)
+    target_link_libraries(${GEODESUKA_UNIT_TEST} PRIVATE ${VULKAN_SDK_ROOT_DIR}/Lib/SDL2_test.lib)
+    target_link_libraries(${GEODESUKA_UNIT_TEST} PRIVATE ${VULKAN_SDK_ROOT_DIR}/Lib/dxcompiler.lib)
     foreach(lib ${VULKAN_SDK_SECONDARY_LIBRARIES})
-        target_link_libraries(${GEODESUKA_LIBRARY} PRIVATE debug ${VULKAN_SDK_ROOT_DIR}/Lib/${lib}d.lib)
+        target_link_libraries(${GEODESUKA_UNIT_TEST} PRIVATE debug ${VULKAN_SDK_ROOT_DIR}/Lib/${lib}d.lib)
     endforeach(lib ${VULKAN_SDK_SECONDARY_LIBRARIES})
     foreach(lib ${VULKAN_SDK_SECONDARY_LIBRARIES})
-        target_link_libraries(${GEODESUKA_LIBRARY} PRIVATE optimized ${VULKAN_SDK_ROOT_DIR}/Lib/${lib}.lib)
+        target_link_libraries(${GEODESUKA_UNIT_TEST} PRIVATE optimized ${VULKAN_SDK_ROOT_DIR}/Lib/${lib}.lib)
     endforeach(lib ${VULKAN_SDK_SECONDARY_LIBRARIES})
 elseif (CMAKE_SYSTEM_NAME MATCHES "Linux")
-    # target_link_libraries(${GEODESUKA_LIBRARY} PRIVATE -lvolk)
-    # target_link_libraries(${GEODESUKA_LIBRARY} PRIVATE -lSDL2-static)
-    # target_link_libraries(${GEODESUKA_LIBRARY} PRIVATE -lSDL2)
-    # target_link_libraries(${GEODESUKA_LIBRARY} PRIVATE -lSDL2main)
-    # target_link_libraries(${GEODESUKA_LIBRARY} PRIVATE -lSDL2_test)
-    # target_link_libraries(${GEODESUKA_LIBRARY} PRIVATE -ldxcompiler)
+    # target_link_libraries(${GEODESUKA_UNIT_TEST} PRIVATE -lvolk)
+    # target_link_libraries(${GEODESUKA_UNIT_TEST} PRIVATE -lSDL2-static)
+    # target_link_libraries(${GEODESUKA_UNIT_TEST} PRIVATE -lSDL2)
+    # target_link_libraries(${GEODESUKA_UNIT_TEST} PRIVATE -lSDL2main)
+    # target_link_libraries(${GEODESUKA_UNIT_TEST} PRIVATE -lSDL2_test)
+    # target_link_libraries(${GEODESUKA_UNIT_TEST} PRIVATE -ldxcompiler)
     foreach(lib ${VULKAN_SDK_SECONDARY_LIBRARIES})
-        target_link_libraries(${GEODESUKA_LIBRARY} PRIVATE debug -l${lib}d)
+        target_link_libraries(${GEODESUKA_UNIT_TEST} PRIVATE debug -l${lib}d)
     endforeach(lib ${VULKAN_SDK_SECONDARY_LIBRARIES})
     foreach(lib ${VULKAN_SDK_SECONDARY_LIBRARIES})
-        target_link_libraries(${GEODESUKA_LIBRARY} PRIVATE optimized -l${lib})
+        target_link_libraries(${GEODESUKA_UNIT_TEST} PRIVATE optimized -l${lib})
     endforeach(lib ${VULKAN_SDK_SECONDARY_LIBRARIES})
 elseif (CMAKE_SYSTEM_NAME MATCHES "Darwin")
 else()
 endif()
 
 # Link Third Party Libraries
-target_link_libraries(${GEODESUKA_LIBRARY} PRIVATE glfw)
-target_link_libraries(${GEODESUKA_LIBRARY} PRIVATE assimp)
-target_link_libraries(${GEODESUKA_LIBRARY} PRIVATE freetype)
+target_link_libraries(${GEODESUKA_UNIT_TEST} PRIVATE glfw)
+target_link_libraries(${GEODESUKA_UNIT_TEST} PRIVATE assimp)
+target_link_libraries(${GEODESUKA_UNIT_TEST} PRIVATE freetype)
+target_link_libraries(${GEODESUKA_UNIT_TEST} PRIVATE ${GEODESUKA_LIBRARY})
