@@ -31,10 +31,9 @@ namespace geodesuka::core::stage {
 
 		// -------------------- native methods ---------------------- //
 
-		object::skybox* Skybox;
-
-		int LightCount;
-		object::light** Light;
+		object::skybox* 				Skybox;
+		std::vector<object::light*> 	Light;
+		std::vector<object::camera3d*> 	Camera;
 
 
 

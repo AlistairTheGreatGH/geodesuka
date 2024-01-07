@@ -56,6 +56,8 @@ namespace geodesuka::core::graphics {
 			// For this node, it will calculate the model transform for a node at a particular time.
 			// It uses the node's animation data to calculate the transform.
 			math::mat4<float> global_transform(double aTime);
+			// Gathers a list of references to MeshInstance objects.
+			std::vector<mesh::instance*> gather_mesh_instances();
 
 		private:
 

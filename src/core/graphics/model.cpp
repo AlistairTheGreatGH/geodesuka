@@ -289,6 +289,18 @@ namespace geodesuka::core::graphics {
 		}
 	}
 
+	std::vector<mesh::instance*> model::node::gather_mesh_instances() {
+		std::vector<mesh::instance*> MIL(this->MeshInstance.size());
+		for (size_t i = 0; i < MIL.size(); i++) {
+			MIL[i] = &this->MeshInstance[i];
+		}
+		for (model::node& Chd : this->Child) {
+			std::vector<mesh::instance*> CMIL = Chd.gather_mesh_instances();
+			MIL.insert(MIL.end(), CMIL.begin(), CMIL.end());
+		}
+		return MIL;
+	}
+
 	void model::node::set_root(node* aRoot) {
 		this->Root = aRoot;
 		for (node& Chd : Child) {
@@ -490,16 +502,21 @@ namespace geodesuka::core::graphics {
 			this->Mesh[i].MaterialIndex = Scene->mMeshes[i]->mMaterialIndex;
 		}
 
-
-		// I have no fucking clue how to handle materials.
+		// What is the point of a material? Material describes the material
+		// of a surface. A material has qualities to it that affects how it
+		// is seen.
 		this->Material = std::vector<material>(Scene->mNumMaterials);
 		for (size_t i = 0; i < Scene->mNumMaterials; i++) {
 			aiMaterial *Mat = Scene->mMaterials[i];
-			//for (size_t j = 0; j < Mat->mNumProperties; j++) {
-			//	aiMaterialProperty* Prop = Mat->mProperties[j];
-			//	if (Prop->mKey == AI_MATKEY_NAME) {
+			for (size_t j = 0; j < Mat->mNumProperties; j++) {
+				aiMaterialProperty* Prop = Mat->mProperties[j];
+				std::string Key = Prop->mKey.C_Str();
+				if (Key == AI_MATKEY_NAME) {
 
-			//	}
+				}
+
+			}
+			
 			//	std::cout << "mKey = " << Prop->mKey.C_Str() << ",\t";
 			//	std::cout << "mSemantic = " << Prop->mSemantic << ",\t";
 			//	std::cout << "mIndex = " << Prop->mIndex << ",\t";

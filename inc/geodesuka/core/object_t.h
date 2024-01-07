@@ -91,11 +91,10 @@ namespace geodesuka::core {
 		virtual void set_name(const char* aName);
 		const char* get_name() const;
 
-		virtual void predraw(object::render_target* aRenderTarget);
-		void operator-=(object::render_target* aRenderTarget);
+		virtual graphics::render_operation* generate_render_operation(object::render_target* aRenderTarget);
 
 		// Will provide a command list on how this object will be rendered to target.
-		virtual gcl::command_list draw(object::render_target* aRenderTarget);
+		virtual std::vector<VkCommandBuffer> draw(object::render_target* aRenderTarget);
 
 	protected:
 

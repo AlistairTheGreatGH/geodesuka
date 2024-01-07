@@ -23,14 +23,13 @@ namespace geodesuka::core::graphics {
 	public:
 
 		gcl::context*											Context;
-		object::render_target*									RenderTarget;
 		VkDescriptorPool										DescriptorPool;
 		std::vector<std::vector<VkDescriptorSet>>				DescriptorSet;
-		std::vector<gcl::command_list>							DrawCommand;
+		std::vector<std::vector<VkCommandBuffer>> 				DrawCommand;
 
 		~render_operation();
 
-		gcl::command_list& operator[](int aIndex);
+		std::vector<VkCommandBuffer> operator[](int aIndex);
 
 	protected:
 

@@ -258,7 +258,7 @@ namespace geodesuka {
 		AppInfo.applicationVersion			= VK_MAKE_VERSION(1, 0, 0);
 		AppInfo.pEngineName					= (const char*)this->Name.Handle;
 		AppInfo.engineVersion				= VK_MAKE_VERSION(Version.Major, Version.Minor, Version.Revision);
-		AppInfo.apiVersion					= VK_MAKE_VERSION(1, 2, 0);
+		AppInfo.apiVersion					= VK_MAKE_VERSION(1, 3, 0);
 
 		CreateInfo.sType					= VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 		CreateInfo.pNext					= NULL;

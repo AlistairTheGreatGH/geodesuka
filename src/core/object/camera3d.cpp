@@ -166,6 +166,8 @@ namespace geodesuka::core::object {
 
 		this->create_pipelines();
 
+		
+
 	}
 
 	void camera3d::update(double aDeltaTime) {

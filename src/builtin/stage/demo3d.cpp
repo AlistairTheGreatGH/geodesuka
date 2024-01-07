@@ -1,21 +1,24 @@
 #include <geodesuka/builtin/stage/demo3d.h>
 
-#include <geodesuka/builtin/object/triangle.h>
-#include <geodesuka/builtin/object/quad.h>
+#include <geodesuka/engine.h>
+
+using namespace geodesuka::core::object;
 
 namespace geodesuka::builtin::stage {
 
-	using namespace core::object;
-
-
 	demo3d::demo3d(core::gcl::context* aContext) : scene3d(aContext) {
-		//this->RenderTarget		|= new camera3d(aEngine, aContext, this, "Camera3D", 3, 60.0, math::vec3<float>(0, 0, 0), math::vec2<int>(640, 480));
-
-		//this->Object			|= new object::triangle(Engine, aContext, this, "Triangle");
+		// this->Camera		|= new camera3d(Context, this, "Camera3D", math::vec3<float>(0.0f, 0.0f, 0.0f), math::vec2<int>(1280, 720), 60.0, 3);
+		// this->Object		|= new object::triangle(Context, this, "Triangle");
 	}
 
 	demo3d::~demo3d() {
 
+	}
+
+	render_target::render_info demo3d::render() {
+		render_target::render_info RenderInfo{};
+
+		return RenderInfo;
 	}
 
 }

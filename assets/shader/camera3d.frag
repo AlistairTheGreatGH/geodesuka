@@ -23,8 +23,8 @@ layout (location = 3) out vec4 PixelSpecular;
 void main() {
     // Copy color over, no need for modification.
     PixelColor      = texture(TextureColor, UV);
-
     // Positions and normals will be modified by Normal maps and Height maps.
     PixelPosition   = vec4(WorldPosition, 1.0f);
     PixelNormal     = vec4(WorldNormal + texture(TextureNormal, UV).xyz, 1.0f);
+    PixelSpecular   = vec4(0.0f, 0.0f, 0.0f, 0.0f);
 }

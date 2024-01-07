@@ -74,7 +74,7 @@ namespace geodesuka::builtin::app {
 		Compositor = new canvas(DeviceContext, Window);
 
 		// Create Demo3D Stage.
-		//Demo3D = new demo3d(Context);
+		Demo3D = new demo3d(DeviceContext);
 
 		while (Engine->ThreadController.cycle(this->TimeStep.load())) {
 			//*Engine->State.SystemTerminal << "AppThread\n";

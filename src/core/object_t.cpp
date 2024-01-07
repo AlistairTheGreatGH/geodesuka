@@ -27,12 +27,6 @@ namespace geodesuka::core {
 
 		this->DrawCommand.resize(aWindow->Frame.size());
 
-		float Vertex[] = {
-			-1.0f, 0.0f, 0.0f,
-			1.0f, 0.0f, 0.0f,
-			0.0f, 1.0f, 0.0f
-		};
-
 		for (size_t i = 0; i < aWindow->Frame.size(); i++) {
 
 		}
@@ -47,8 +41,6 @@ namespace geodesuka::core {
 		VkResult Result = VK_SUCCESS;
 
 		this->Context 		= aContext;
-
-		this->RenderTarget 	= aCamera3D;
 
 		// The number of descriptor sets needed must be determined by the render target.
 		std::vector<VkDescriptorPoolSize> DescriptorPoolSize = aCamera3D->descriptor_pool_sizes();
@@ -75,77 +67,49 @@ namespace geodesuka::core {
 
 		// ---------- Command Buffers ---------- //
 
-		//// Creates command buffers for render operation.
-		//this->DrawCommand.resize(aCamera3D->Frame.size());
-		//for (size_t i = 0; i < aCamera3D->Frame.size(); i++) {
-		//	this->DrawCommand[i] = aCamera3D->CommandPool->allocate(aObject->Model->command_buffer_count());
-		//}
+		// When rendering a model, we will allocate a command buffer for every mesh instance 
+		// in the node hierarchy of the model.
+		DrawCommand = std::vector<std::vector<VkCommandBuffer>>(aCamera3D->Frame.size());
+		for (size_t i = 0; i < aCamera3D->Frame.size(); i++) {
+			// Get the mesh instance list to 
+			std::vector<graphics::mesh::instance*> MeshInstance = aObject->Model->Hierarchy.gather_mesh_instances();
+			DrawCommand[i] = std::vector<VkCommandBuffer>(MeshInstance.size());
+			for (size_t j = 0; j < MeshInstance.size(); j++) {
+				// Get reference for readability.
+				graphics::mesh& Mesh 		= aObject->Model->Mesh[MeshInstance[j]->Index];
+				gcl::pipeline& Pipeline 	= aCamera3D->Pipeline[0];
+				std::vector<VkBuffer> VertexBuffer = {
+					// This contains the vertex data for the static mesh.
+					Mesh.VertexBuffer.handle(),
+					// This buffer contains the per-vertex weight data {BoneID, BoneWeight}.
+					MeshInstance[j]->VertexWeightBuffer.handle()
+				};
+				size_t IndexCount = 0;
+				switch(aObject->Model->Mesh[MeshInstance[j]->Index].Index.Type) {
+				case VK_INDEX_TYPE_UINT16:
+					IndexCount = aObject->Model->Mesh[MeshInstance[j]->Index].Index.Data16.size();
+					break;
+				case VK_INDEX_TYPE_UINT32:
+					IndexCount = aObject->Model->Mesh[MeshInstance[j]->Index].Index.Data32.size();
+					break;
+				default:
+					IndexCount = 0;
+					break;
+				}
 
-		//for (size_t i = 0; i < aCamera3D->Frame.size(); i++) {
-		//	size_t j = 0;
-		//	// Iterate through nodes with meshes references.
-		//	for (int a = 0; a < aObject->Model->MeshNode.size(); a++) {
-		//		// iterate through mesh instances.
-		//		for (int b = 0; b < aObject->Model->MeshNode[a].MeshIndexCount; b++) {
-		//			int MeshIndex = aObject->Model->MeshNode[a].MeshIndex[b];
-		//			// Iterate through mesh faces
-		//			for (int c = 0; c < aObject->Model->Mesh[MeshIndex]->Face.size(); c++) {
-		//				VkResult Result = VK_SUCCESS;
-		//				VkCommandBufferBeginInfo CommandBufferBeginInfo{};
-		//				VkRenderPassBeginInfo RenderPassBeginInfo{};
-
-		//				CommandBufferBeginInfo.sType				= VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		//				CommandBufferBeginInfo.pNext				= NULL;
-		//				CommandBufferBeginInfo.flags				= 0;
-		//				CommandBufferBeginInfo.pInheritanceInfo		= NULL;
-
-		//				RenderPassBeginInfo.sType					= VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		//				RenderPassBeginInfo.pNext					= NULL;
-		//				RenderPassBeginInfo.renderPass				= aCamera3D->RenderPass;
-		//				RenderPassBeginInfo.framebuffer				= aCamera3D->Frame[i].Buffer;
-		//				RenderPassBeginInfo.renderArea				= aCamera3D->RenderArea;
-		//				RenderPassBeginInfo.clearValueCount			= 0;
-		//				RenderPassBeginInfo.pClearValues			= NULL;
-
-		//				Result = vkBeginCommandBuffer(this->DrawCommand[i][j], &CommandBufferBeginInfo);
-		//				vkCmdBeginRenderPass(this->DrawCommand[i][j], &RenderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-		//				vkCmdBindVertexBuffers(
-		//					this->DrawCommand[i][j],
-		//					0, 
-		//					1,
-		//					&aObject->Model->Mesh[MeshIndex]->VertexBuffer.handle(),
-		//					NULL
-		//				);
-		//				vkCmdBindIndexBuffer(
-		//					this->DrawCommand[i][j],
-		//					aObject->Model->Mesh[MeshIndex]->IndexBuffer[c].handle(),
-		//					0,
-		//					aObject->Model->Mesh[MeshIndex]->Face[c].IndexType
-		//				);
-		//				vkCmdBindDescriptorSets(
-		//					this->DrawCommand[i][j], 
-		//					aCamera3D->Pipeline[0].BindPoint,
-		//					aCamera3D->Pipeline[0].Layout,
-		//					0, 
-		//					aCamera3D->Pipeline[0].DescriptorSetLayoutCount,
-		//					NULL, // <-- Descriptor Sets go here
-		//					0, 
-		//					NULL
-		//				);
-		//				vkCmdBindPipeline(
-		//					this->DrawCommand[i][j], 
-		//					aCamera3D->Pipeline[0].BindPoint,
-		//					aCamera3D->Pipeline[0].Handle
-		//				);
-		//				vkCmdDrawIndexed(this->DrawCommand[i][j], aObject->Model->Mesh[MeshIndex]->Face[c].IndexCount, 1, 0, 0, 0);
-		//				vkCmdEndRenderPass(this->DrawCommand[i][j]);
-		//				Result = vkEndCommandBuffer(this->DrawCommand[i][j]);
-
-		//				j += 1;
-		//			}
-		//		}
-		//	}
-		//}
+				// Draw here.
+				Result = aContext->begin(DrawCommand[i][j]);
+				aContext->begin_rendering(DrawCommand[i][j], aCamera3D->RenderArea, aCamera3D->Frame[i].Attachment);
+				aContext->bind_vertex_buffers(DrawCommand[i][j], VertexBuffer);
+				aContext->bind_index_buffer(DrawCommand[i][j], Mesh.IndexBuffer.handle(), Mesh.Index.Type);
+				aContext->bind_descriptor_sets(DrawCommand[i][j], Pipeline.BindPoint, Pipeline.Layout, this->DescriptorSet[i]);
+				aContext->bind_pipeline(DrawCommand[i][j], Pipeline.BindPoint, Pipeline.Handle);
+				aContext->draw_indexed(DrawCommand[i][j], IndexCount);
+				aContext->end_rendering(DrawCommand[i][j]);
+				Result = aContext->end(DrawCommand[i][j]);
+				// Draw here.
+			}
+		}
 
 	}
 
@@ -175,54 +139,46 @@ namespace geodesuka::core {
 		return this->Name.ptr();
 	}
 
-	void object_t::predraw(object::render_target* aRenderTarget) {
+	graphics::render_operation* object_t::generate_render_operation(object::render_target* aRenderTarget) {
 		switch (aRenderTarget->id()) {
-		default:
-			break;
 		case object::system_window::ID:
 		case object::virtual_window::ID:
 		// Check if object is a render target, the swap render ops.
-			RenderOperation[aRenderTarget] = new default_renderer(
+			return new default_renderer(
 				Context,
 				(object::window*)aRenderTarget,
 				this
 			);
 			break;
 		case object::camera2d::ID:
-			RenderOperation[aRenderTarget] = new default_renderer(
+			return new default_renderer(
 				Context,
 				(object::camera2d*)aRenderTarget,
 				this
 			);
 			break;
 		case object::camera3d::ID:
-			RenderOperation[aRenderTarget] = new default_renderer(
+			return new default_renderer(
 				Context,
 				(object::camera3d*)aRenderTarget,
 				this
 			);
 			break;
+		default:
+			return nullptr;
 		}
 	}
 
-	void object_t::operator-=(object::render_target* aRenderTarget) {
-		if (this->RenderOperation.count(aRenderTarget) > 0) {
-			delete this->RenderOperation[aRenderTarget];
-			this->RenderOperation.erase(aRenderTarget);
-		}
-	}
-
-	gcl::command_list object_t::draw(object::render_target* aRenderTarget) {
-		gcl::command_list DrawBatch;
+	std::vector<VkCommandBuffer> object_t::draw(object::render_target* aRenderTarget) {
 
 		// Check if rendering operation exists for render target.
 		if (this->RenderOperation.count(aRenderTarget) == 0) {
-			this->predraw(aRenderTarget);
+			// If render operation does not exist, generate one.
+			this->RenderOperation[aRenderTarget] = this->generate_render_operation(aRenderTarget);
 		}
 
-		// Get Draw Commands
-		DrawBatch = (*this->RenderOperation[aRenderTarget])[aRenderTarget->FrameDrawIndex];
-		return DrawBatch;
+		// Grab the command buffer list for the selected render targer and frame.
+		return (*this->RenderOperation[aRenderTarget])[aRenderTarget->FrameDrawIndex];
 	}
 
 	// ------------------------------ protected methods ---------------------------- //

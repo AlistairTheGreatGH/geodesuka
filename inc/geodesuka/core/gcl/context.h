@@ -50,6 +50,16 @@ namespace geodesuka::core::gcl {
 		VkResult begin(VkCommandBuffer aCommandBuffer);
 		VkResult end(VkCommandBuffer aCommandBuffer);
 
+		// TODO: Maybe use forward declaration? 
+		void bind_vertex_buffers(VkCommandBuffer aCommandBuffer, std::vector<VkBuffer> aBufferList, const VkDeviceSize* aOffset = NULL);
+		void bind_index_buffer(VkCommandBuffer aCommandBuffer, VkBuffer aBufferHandle, VkIndexType aIndexType);
+		void bind_descriptor_sets(VkCommandBuffer aCommandBuffer, VkPipelineBindPoint aPipelineBindPoint, VkPipelineLayout aPipelineLayout, std::vector<VkDescriptorSet> aDescriptorSetList, std::vector<uint32_t> aDynamicOffsetList = std::vector<uint32_t>(0));
+		void bind_pipeline(VkCommandBuffer aCommandBuffer, VkPipelineBindPoint aPipelineBindPoint, VkPipeline aPipelineHandle);
+		void draw_indexed(VkCommandBuffer aCommandBuffer, uint32_t aIndexCount, uint32_t aInstanceCount = 1, uint32_t aFirstIndex = 0, uint32_t aVertexOffset = 0, uint32_t aFirstInstance = 0);
+
+		void begin_rendering(VkCommandBuffer aCommandBuffer, VkRect2D aRenderArea, std::vector<VkImageView> aColorAttachments, VkImageView aDepthAttachment = VK_NULL_HANDLE, VkImageView aStencilAttachment = VK_NULL_HANDLE);
+		void end_rendering(VkCommandBuffer aCommandBuffer);
+
 		// This series of methods are for the creation and destruction of semaphores for the synchronization
 		// between command_lists and VkSubmitInfo structures.
 		VkSemaphore create_semaphore();
