@@ -5,57 +5,57 @@
 
 ## State of the Engine
 
-Branches/Versions 0.1.0, and 0.1.1 have been abandoned due to their uncompilable nature. Instead, modifications
-will be slowly copied and pasted into this branch because of this. Version 0.1.2 is a branch of 0.0.21, which
-was the first successful rendering of the engine.
+Currently working on the 3d rendering for the engine. Still in conceptual phase, determining material system.
 
 ## Building & Compiling
+The geodesuka engine has been designed to make it as easy as possible to integrate
+with your project provided you have the installed dependencies. The geodesuka uses
+CMake to generate project build files to maintain a cross platform build system. 
+Provided you know how to use CMake, it should be fairly easy to configure your project
+to use the geodesuka engine. The first depedency, which you will need to use the geodesuka
+engine is CMake. CMake is used to generate project build files so you can compile the source
+for the targeted platform. Secondly, which is irrelevant to what ever platform you wish to 
+compile from is the Vulkan SDK. To actually interact with GPU hardware you need an API to 
+do so, and Vulkan is that API. After 
+
+CMake:
+https://cmake.org/
+
+Vulkan SDK:
+https://www.lunarg.com/vulkan-sdk/
 
 # Windows
+On Windows, you can use MSVC, MinGW, or whatever compiler set is most convenient to you.
+Most of the development of this engine is done on Windows using MSVC++. 
 
-Requires Packages: VulkanSDK
-cmake -S . -B bld/Windows/ -G "Visual Studio 17 2022"
+Visual Studio IDE:
+https://visualstudio.microsoft.com/vs/
+
+
+cmake -S . -B bld/ -G "Visual Studio 17 2022"
 
 # Linux
+On Linux, you will probably end up using GCC, or CLang, or whatever (IDGAF). You
+just need to insure that you have those compilers installed, you need a windowing 
+server system to interact with. Either X11 or Wayland, up to you. I don't care. Or
+you can use the install.sh script in the doc/ folder to auto install the dependencies.
 
-Requires Packages: gcc, git, cmake, xorg-dev, vulkan-sdk
-
-Run installer shell file
-./doc/install.sh
-Then run the project builder
-cmake -S . -B bld/Linux/
-
-# Updated List:
-
-- added thread_controller class, which will be used for interthread communication and timing.
-
-- cleaned up string class.
-
-- added FreeImage, FreeType, Assimp, 
+cmake -S . -B bld/ -G "Unix Makefiles"
 
 # To Do List:
 
-- Creating Error Logging System.
+- Finish model.h material system.
 
-- Update variable.h to recognize vulkan types.
-
-- Extract uniform variables from shader.
-
-- math.h will be re worked to include fields.
-
-- Add r1.h, r2.h, r3.h, r4.h, and vector field classes to engine.
-
-- Add layering system for window objects, for huds, system stats and so
-on. (Will be done with canvas class, and window as target.)
+- Clean up pipeline.h to generate descriptor sets for model.h
 
 - Resolve issue with object being used in multiple stages simultaneously.
 
-- Work on audio processing for game engine.
-
-- Link asset libraries such as Assimp, FreeType, FreeImage, and so on to
-geodesuka.
-
 # Back Burner:
+
+- Introduce portaudio to the geodesuka engine.
+
+- Add layering system for window objects, for huds, system stats and so
+on. (Will be done with canvas class, and window as target.)
 
 - File System stuff.
 
@@ -72,7 +72,3 @@ and forward to proper objects.
 along with how vulkan does it, is that a texture describes the texture
 of a particular surface while an image is a generalized concept of a type
 of memory.
-
-- Set up compilation unit directories to prevent source name space over writing.
-
-- Add memory pool manager. 

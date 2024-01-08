@@ -1,5 +1,6 @@
-# Install Compilers, Project Builder, and Git Tools
-sudo apt install gcc cmake git
+sudo apt install cmake
+sudo apt install git
+sudo apt install gcc
 # Install X11 Dev Kit
 sudo apt install xorg-dev
 # Install Vulkan
