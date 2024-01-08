@@ -1,4 +1,4 @@
-## Geodesuka Engine v0.1.5
+# Geodesuka Engine v0.1.5
 
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE.md)
 [![forthebadge](https://forthebadge.com/images/badges/works-on-my-machine.svg)](https://forthebadge.com)
@@ -24,7 +24,7 @@ https://cmake.org/
 Vulkan SDK:
 https://www.lunarg.com/vulkan-sdk/
 
-# Windows
+## Windows
 On Windows, you can use MSVC, MinGW, or whatever compiler set is most convenient to you.
 Most of the development of this engine is done on Windows using MSVC++. 
 
@@ -34,7 +34,7 @@ https://visualstudio.microsoft.com/vs/
 
 cmake -S . -B bld/ -G "Visual Studio 17 2022"
 
-# Linux
+## Linux
 On Linux, you will probably end up using GCC, or CLang, or whatever (IDGAF). You
 just need to insure that you have those compilers installed, you need a windowing 
 server system to interact with. Either X11 or Wayland, up to you. I don't care. Or
